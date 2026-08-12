@@ -53,7 +53,13 @@
 - [ ] Establish per-region cinematic biome palettes, fog density, sky conditions, emissive accents, and landmark silhouettes for the river, volcanic, void, ocean, and rainforest themes
 - [ ] Produce original visual targets for the Ember Wastes, Verdant Deep, Pelagunn Shelf, and northern fracture regions without copying the reference architecture or labels
 - [ ] Upgrade Babylon rendering with selective terrain variation, instanced vegetation and rocks, atmospheric depth, water treatment, and performance budgets for browser delivery
-- [ ] Build an interactive world-atlas screen that communicates regional progression, travel routes, and elemental identity while remaining accessible at mobile and desktop breakpoints
+- [x] Build an interactive world-atlas screen that communicates regional progression, travel routes, and elemental identity while remaining accessible at mobile and desktop breakpoints
+
+## 8A. Original World Atlas
+- [x] Define original named atlas regions, element palettes, unlock states, and concise accessibility labels without reusing supplied reference labels or symbols
+- [x] Build a mobile-first atlas panel with a readable Great River Spine route, locked regional previews, and return navigation to the title journey flow
+- [x] Add browser-like atlas navigation coverage and verify the atlas remains readable at 375×812 and desktop viewport sizes
+- [x] Add a Home/title-flow integration test that opens the atlas, verifies the current and sealed route states, and returns to the title screen
 - [x] Extract browser-safe atmosphere, weather, camera, and environmental-motion cues from the supplied video reference and translate them into original Aurastria effects
 - [x] Analyze the two additional video references and consolidate their reusable atmosphere and motion principles into the original Aurastria specification
 - [ ] Implement and profile the approved Great River Spine art-direction pass: fog, landmark focal hierarchy, terrain material variation, instanced foliage, water motion, and capped ambient particles

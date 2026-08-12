@@ -36,6 +36,7 @@ interface TitleMenuProps {
   readonly onBegin: () => void;
   readonly onSignIn: () => void;
   readonly onInstall: () => void;
+  readonly onAtlas: () => void;
   readonly onSettings: () => void;
   readonly onDeleteSlot: (slot: number) => void;
 }
@@ -44,7 +45,7 @@ function formatSavedAt(value: Date): string {
   return new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(value);
 }
 
-export function TitleMenu({ signedIn, online, canInstall, installHint, slots, selectedSlot, busy, onSelectSlot, onBegin, onSignIn, onInstall, onSettings, onDeleteSlot }: TitleMenuProps) {
+export function TitleMenu({ signedIn, online, canInstall, installHint, slots, selectedSlot, busy, onSelectSlot, onBegin, onSignIn, onInstall, onAtlas, onSettings, onDeleteSlot }: TitleMenuProps) {
   const slotByNumber = new Map(slots.map((slot) => [slot.slot, slot]));
   return (
     <MenuFrame eyebrow="Aurastria · Founding Season" title="Spirits of the First Dawn">
@@ -75,6 +76,7 @@ export function TitleMenu({ signedIn, online, canInstall, installHint, slots, se
         <button type="button" autoFocus className="rounded-sm bg-[#d9b867] px-4 py-2.5 font-serif text-lg text-[#08251e] transition active:scale-[0.97] hover:bg-[#efd488] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f7e9c2] disabled:cursor-wait disabled:opacity-70" onClick={onBegin} disabled={busy}>{busy ? "Opening archive…" : signedIn ? "Enter journey" : "Begin practice journey"}</button>
         {signedIn ? null : <button type="button" className="rounded-sm border border-[#d9b867]/60 px-4 py-2.5 text-sm uppercase tracking-[0.14em] text-[#f0dfb6] transition active:scale-[0.97] hover:bg-[#d9b867]/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f7e9c2]" onClick={onSignIn}>Sign in to archive</button>}
         {canInstall ? <button type="button" className="rounded-sm border border-[#3dd4cc]/65 px-4 py-2.5 text-sm uppercase tracking-[0.14em] text-[#bceee5] transition active:scale-[0.97] hover:bg-[#3dd4cc]/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f7e9c2]" onClick={onInstall}>Install app</button> : null}
+        <button type="button" className="rounded-sm border border-[#69ddd4]/50 px-4 py-2.5 text-sm uppercase tracking-[0.14em] text-[#d5fff7] transition active:scale-[0.97] hover:bg-[#69ddd4]/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f7e9c2]" onClick={onAtlas}>Open atlas</button>
         <button type="button" className="rounded-sm border border-[#d9b867]/40 px-4 py-2.5 text-sm uppercase tracking-[0.14em] text-[#f0dfb6] transition active:scale-[0.97] hover:bg-[#d9b867]/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f7e9c2]" onClick={onSettings}>Settings</button>
       </div>
     </MenuFrame>
@@ -121,3 +123,4 @@ export function SettingsMenu({ uiScale, onUiScaleChange, onClose }: SettingsMenu
     </MenuFrame>
   );
 }
+import React from "react";

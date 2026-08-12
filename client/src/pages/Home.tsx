@@ -2,6 +2,7 @@ import { PauseMenu, SettingsMenu, TitleMenu } from "@/components/game/JourneyMen
 import { TouchControls } from "@/components/game/TouchControls";
 import { NarrativeSheet } from "@/components/game/NarrativeSheet";
 import { GameMasterRibbon } from "@/components/game/GameMasterRibbon";
+import { WorldAtlasPanel } from "@/components/game/WorldAtlasPanel";
 import type { AurastriaSceneHandle } from "@/game/scene/createAurastriaScene";
 import type { SaveStateInput } from "@shared/game/schemas";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -40,8 +41,9 @@ export default function Home() {
   const [status, setStatus] = useState("Survey the river basin, then press E near the camp to hear its next need.");
   const [hud, setHud] = useState<AurastriaSceneHandle["hud"]>(INITIAL_HUD);
   const [scene, setScene] = useState<AurastriaSceneHandle | null>(null);
-  const [screen, setScreen] = useState<"title" | "play" | "settings">(() => {
-    return new URLSearchParams(window.location.search).get("journey") === "play" ? "play" : "title";
+  const [screen, setScreen] = useState<"title" | "play" | "settings" | "atlas">(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get("journey") === "play" ? "play" : params.get("atlas") === "1" ? "atlas" : "title";
   });
   const pendingSaveRef = useRef<SaveStateInput | null>(null);
   const [selectedSlot, setSelectedSlot] = useState(1);
@@ -229,7 +231,8 @@ export default function Home() {
           </section>
         </div>
       </div>
-      {screen === "title" ? <TitleMenu signedIn={isAuthenticated} online={online} canInstall={installPrompt !== null} installHint={installPrompt ? null : installHint} slots={savedSlots} selectedSlot={selectedSlot} busy={authLoading || loadSave.isFetching} onSelectSlot={setSelectedSlot} onBegin={() => void beginJourney()} onSignIn={startLogin} onInstall={() => void requestInstall()} onSettings={() => { setSettingsReturnTo("title"); setScreen("settings"); }} onDeleteSlot={(slot) => void deleteSlot(slot)} /> : null}
+      {screen === "title" ? <TitleMenu signedIn={isAuthenticated} online={online} canInstall={installPrompt !== null} installHint={installPrompt ? null : installHint} slots={savedSlots} selectedSlot={selectedSlot} busy={authLoading || loadSave.isFetching} onSelectSlot={setSelectedSlot} onBegin={() => void beginJourney()} onSignIn={startLogin} onInstall={() => void requestInstall()} onAtlas={() => setScreen("atlas")} onSettings={() => { setSettingsReturnTo("title"); setScreen("settings"); }} onDeleteSlot={(slot) => void deleteSlot(slot)} /> : null}
+      {screen === "atlas" ? <WorldAtlasPanel onClose={() => setScreen("title")} /> : null}
       {screen === "play" && hud.paused ? <PauseMenu signedIn={isAuthenticated} online={online} saving={upsertSave.isPending} onResume={() => scene?.setPaused(false)} onSave={() => void saveJourney()} onSettings={() => { setSettingsReturnTo("play"); setScreen("settings"); }} onTitle={returnToTitle} /> : null}
       {screen === "settings" ? <SettingsMenu uiScale={uiScale} onUiScaleChange={updateUiScale} onClose={() => setScreen(settingsReturnTo)} /> : null}
       {screen === "play" ? <GameMasterRibbon text={gmText} /> : null}
