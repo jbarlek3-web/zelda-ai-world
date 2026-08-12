@@ -47,3 +47,27 @@
 - [x] Specify AI simulation contracts for NPC goals, faction loyalty, trade, law, diplomacy, navigation, and player-consequence safeguards
 - [x] Create an art-prompt bible for regions, settlements, characters, creatures, gear, temples, dungeons, and spirit realms using fictional cultures rather than pan-Indigenous amalgams
 - [x] Establish an Indigenous cultural-review process before final narrative, art, language, ceremony, and sacred-site content are approved
+
+## 8. Cinematic World-Art Direction
+- [ ] Translate the supplied world-map composition into an original Aurastria atlas with fictional region names, non-derivative geography, and no borrowed symbols or labels
+- [ ] Establish per-region cinematic biome palettes, fog density, sky conditions, emissive accents, and landmark silhouettes for the river, volcanic, void, ocean, and rainforest themes
+- [ ] Produce original visual targets for the Ember Wastes, Verdant Deep, Pelagunn Shelf, and northern fracture regions without copying the reference architecture or labels
+- [ ] Upgrade Babylon rendering with selective terrain variation, instanced vegetation and rocks, atmospheric depth, water treatment, and performance budgets for browser delivery
+- [ ] Build an interactive world-atlas screen that communicates regional progression, travel routes, and elemental identity while remaining accessible at mobile and desktop breakpoints
+- [x] Extract browser-safe atmosphere, weather, camera, and environmental-motion cues from the supplied video reference and translate them into original Aurastria effects
+- [x] Analyze the two additional video references and consolidate their reusable atmosphere and motion principles into the original Aurastria specification
+- [ ] Implement and profile the approved Great River Spine art-direction pass: fog, landmark focal hierarchy, terrain material variation, instanced foliage, water motion, and capped ambient particles
+- [x] Convert repeated Great River Spine foliage and rock details to Babylon instances or thin instances without regressing the visual composition
+- [x] Record a measured browser frame-time or rendering-cost check for the Great River Spine art pass before closing its performance task
+
+## 9. Great River Spine Playable-Loop Pass
+- [ ] Capture a live render-budget sample after a stable browser warm-up and record the 60 FPS / 16.67 ms target comparison
+- [ ] Add an immediate, readable objective-feedback loop: discover the Tideglass Beacon, receive a clear settlement need, and return to the founding camp for a deterministic reward state
+- [ ] Add performance-safe anticipation, arrival, and hold timing to the beacon interaction without overriding player camera control or violating reduced-motion preferences
+
+## 10. Survival-Crafting Input and HUD Slice
+- [x] Implement data-driven move, interact, gather, and pause actions with keyboard and gamepad mappings plus graceful device fallback
+- [x] Add deterministic reed and stone resource nodes, collection validation, and a small starting-inventory state for the first crafting objective
+- [x] Build an event-driven, safe-area-aware exploration HUD for objective state, gathered materials, interaction affordances, and current input hints
+- [x] Refactor interact, gather, and pause to consume the shared input-action mapping contract instead of hardcoded scene-specific key and gamepad button checks
+- [x] Add a concrete starting inventory state, update it on each collection, and expose its resource counts through the HUD state

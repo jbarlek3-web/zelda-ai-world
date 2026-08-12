@@ -5,15 +5,18 @@ import { createAurastriaScene, type AurastriaSceneHandle } from "@/game/scene/cr
 interface GameCanvasProps extends ComponentPropsWithoutRef<"canvas"> {
   readonly onReady?: (handle: AurastriaSceneHandle) => void;
   readonly onStatus?: (status: string) => void;
+  readonly onHud?: (hud: AurastriaSceneHandle["hud"]) => void;
 }
 
-export function GameCanvas({ className, onReady, onStatus, ...canvasProps }: GameCanvasProps) {
+export function GameCanvas({ className, onReady, onStatus, onHud, ...canvasProps }: GameCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const initializedRef = useRef(false);
   const onReadyRef = useRef(onReady);
   const onStatusRef = useRef(onStatus);
+  const onHudRef = useRef(onHud);
   onReadyRef.current = onReady;
   onStatusRef.current = onStatus;
+  onHudRef.current = onHud;
 
   useEffect(() => {
     if (initializedRef.current || !canvasRef.current) {
@@ -26,14 +29,17 @@ export function GameCanvas({ className, onReady, onStatus, ...canvasProps }: Gam
     const gameScene = createAurastriaScene(engine, canvas);
     const resize = () => engine.resize();
     const unsubscribeStatus = gameScene.onStatus((status) => onStatusRef.current?.(status));
+    const unsubscribeHud = gameScene.onHud((hud) => onHudRef.current?.(hud));
 
     engine.runRenderLoop(() => gameScene.scene.render());
     window.addEventListener("resize", resize);
     onReadyRef.current?.(gameScene);
+    onHudRef.current?.(gameScene.hud);
 
     return () => {
       window.removeEventListener("resize", resize);
       unsubscribeStatus();
+      unsubscribeHud();
       engine.stopRenderLoop();
       gameScene.dispose();
       engine.dispose();
