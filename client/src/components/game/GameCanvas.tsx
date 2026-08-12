@@ -8,6 +8,13 @@ interface GameCanvasProps extends ComponentPropsWithoutRef<"canvas"> {
   readonly onHud?: (hud: AurastriaSceneHandle["hud"]) => void;
 }
 
+function mobileRenderScale(): number {
+  const coarsePointer = window.matchMedia?.("(pointer: coarse)").matches ?? false;
+  if (!coarsePointer) return 1;
+  const ratio = window.devicePixelRatio || 1;
+  return Math.max(1, ratio / 1.5);
+}
+
 export function GameCanvas({ className, onReady, onStatus, onHud, ...canvasProps }: GameCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const initializedRef = useRef(false);
@@ -25,7 +32,8 @@ export function GameCanvas({ className, onReady, onStatus, onHud, ...canvasProps
 
     initializedRef.current = true;
     const canvas = canvasRef.current;
-    const engine = new Engine(canvas, true, { preserveDrawingBuffer: false, stencil: true });
+    const engine = new Engine(canvas, true, { preserveDrawingBuffer: false, stencil: true, desynchronized: true });
+    engine.setHardwareScalingLevel(mobileRenderScale());
     const gameScene = createAurastriaScene(engine, canvas);
     const resize = () => engine.resize();
     const unsubscribeStatus = gameScene.onStatus((status) => onStatusRef.current?.(status));

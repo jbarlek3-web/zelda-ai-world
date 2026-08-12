@@ -55,4 +55,19 @@ export const saveStateSchema = z.object({
   completedQuestIds: z.array(z.string().min(1)).max(500),
 });
 
+export const saveSlotSchema = z.number().int().min(1).max(3);
+
+export const saveLabelSchema = z.string().trim().min(1).max(64);
+
+export const saveGameInputSchema = z.object({
+  slot: saveSlotSchema,
+  label: saveLabelSchema,
+  state: saveStateSchema,
+});
+
+export const deleteSaveInputSchema = z.object({
+  slot: saveSlotSchema,
+});
+
 export type SaveStateInput = z.infer<typeof saveStateSchema>;
+export type SaveGameInput = z.infer<typeof saveGameInputSchema>;

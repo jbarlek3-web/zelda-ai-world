@@ -4,9 +4,14 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { httpBatchLink, TRPCClientError } from "@trpc/client";
 import { createRoot } from "react-dom/client";
 import superjson from "superjson";
+import { registerSW } from "virtual:pwa-register";
 import App from "./App";
 import { startLogin } from "./const";
 import "./index.css";
+
+if (import.meta.env.PROD) {
+  registerSW({ immediate: true });
+}
 
 const queryClient = new QueryClient();
 

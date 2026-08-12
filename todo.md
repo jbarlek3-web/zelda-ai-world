@@ -71,3 +71,22 @@
 - [x] Build an event-driven, safe-area-aware exploration HUD for objective state, gathered materials, interaction affordances, and current input hints
 - [x] Refactor interact, gather, and pause to consume the shared input-action mapping contract instead of hardcoded scene-specific key and gamepad button checks
 - [x] Add a concrete starting inventory state, update it on each collection, and expose its resource counts through the HUD state
+
+## 11. Persistence and Screen Stack
+- [x] Add a versioned three-slot save contract, user-scoped `aurastria_saves` table, and database migration
+- [x] Implement protected save list, load, upsert, and delete procedures with user-ownership enforcement
+- [x] Build an accessible title screen with save-slot selection plus pause and settings overlays that preserve the active scene state
+- [x] Connect current quest/inventory/player state to the save boundary and add validated loading or fallback behavior
+
+## 12. Mobile-First PWA and Visual Replacement
+- [x] Define a mobile-first visual target that replaces the prototype grid with an original illustrated terrain style, limited palette, readable silhouettes, and coherent landmark language
+- [x] Add an installable PWA manifest, maskable icons, service-worker registration, and an offline app-shell fallback
+- [ ] Add a user-visible install action when the browser exposes it and an explicit archive-connectivity state for offline journeys
+- [x] Implement touch-first movement, interact, gather, and pause controls with safe-area placement and accessible labels
+- [x] Redesign the phone HUD around a compact top status strip, bottom action cluster, and a minimap or navigation compass rather than desktop-card overlays
+- [ ] Replace the current terrain tiles, primitive camp meshes, and player cylinder with a cohesive low-poly or painted-sprite asset system that remains performant on mobile GPUs
+- [ ] Validate PWA installability, offline reload, touch controls, visual readability, and frame-time budget at 375×812 and 390×844 viewports
+- [x] Code-split the Babylon gameplay runtime so the title screen and install flow open without downloading the full renderer bundle
+- [x] Implement a functional mobile beacon-navigation compass or minimap that updates from the explorer and Tideglass positions
+- [x] Verify the compact HUD and navigation aid remain readable and non-obstructive at 375×812 and 390×844 during active play
+- [x] Record explicit visual-verification evidence for the 375×812 and 390×844 active-play HUD and compass review

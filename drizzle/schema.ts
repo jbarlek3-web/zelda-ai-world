@@ -1,4 +1,4 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
+import { index, int, mysqlEnum, mysqlTable, text, timestamp, uniqueIndex, varchar } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -25,4 +25,17 @@ export const users = mysqlTable("users", {
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 
-// TODO: Add your tables here
+export const aurastriaSaves = mysqlTable("aurastria_saves", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  slot: int("slot").notNull(),
+  label: varchar("label", { length: 64 }).notNull(),
+  stateJson: text("stateJson").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => [
+  uniqueIndex("aurastria_saves_user_slot_unique").on(table.userId, table.slot),
+  index("aurastria_saves_user_updated_idx").on(table.userId, table.updatedAt),
+]);
+
+export type AurastriaSave = typeof aurastriaSaves.$inferSelect;

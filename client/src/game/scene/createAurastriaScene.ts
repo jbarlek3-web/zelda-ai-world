@@ -3,6 +3,7 @@ import { Engine } from "@babylonjs/core/Engines/engine";
 import { Color3, Color4 } from "@babylonjs/core/Maths/math.color";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
+import { Texture } from "@babylonjs/core/Materials/Textures/texture";
 import { DirectionalLight } from "@babylonjs/core/Lights/directionalLight";
 import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
@@ -14,11 +15,14 @@ import { PointLight } from "@babylonjs/core/Lights/pointLight";
 import { Scene } from "@babylonjs/core/scene";
 import { HemisphericLight } from "@babylonjs/core/Lights/hemisphericLight";
 import { EventBus } from "@/game/core/eventBus";
-import { generateGreatRiverSpine, type RiverSpineTileKind } from "@/game/world/greatRiverSpine";
+import { generateGreatRiverSpine } from "@/game/world/greatRiverSpine";
 import { hashCoordinates } from "@/game/world/prng";
 import { deriveRiverArtDirection } from "@/game/render/riverArtDirection";
 import { beaconArrivalScale } from "@/game/render/beaconMotion";
+import { beaconNavigation, type BeaconNavigation } from "@/game/navigation/beaconCompass";
 import { combinedMoveDirection, isGamepadActionPressed, isKeyboardAction } from "@/game/input/inputActions";
+import { createSceneSaveState, restoreFoundingQuest } from "@/game/features/saves/sceneSaveState";
+import type { SaveStateInput } from "@shared/game/schemas";
 import {
   attuneTideglass,
   collectFoundingMaterial,
@@ -34,8 +38,13 @@ const TILE_WORLD_SIZE = 1.55;
 const MAP_WIDTH = 32;
 const MAP_HEIGHT = 24;
 const PLAYER_SPEED = 7;
+const GREAT_RIVER_MOBILE_PLATE_URL = "/manus-storage/aurastria-great-river-mobile-plate_e54226c6.png";
+const TIDEWALKER_TOKEN_URL = "/manus-storage/aurastria-tidewalker-token_62d240e1.png";
+const FOUNDING_CAMP_MARKER_URL = "/manus-storage/aurastria-founding-camp-marker_c7a362ba.png";
+const TIDEGLASS_BEACON_SPRITE_URL = "/manus-storage/aurastria-tideglass-beacon-sprite_2655aa3a.png";
 
 interface RiverTerrainRuntime {
+  readonly worldSeed: number;
   readonly waterMaterials: readonly { readonly material: StandardMaterial; readonly baseEmissive: Color3; readonly phase: number }[];
   readonly beacon: Mesh;
   readonly beaconPosition: Vector3;
@@ -54,6 +63,7 @@ export interface AurastriaHud {
   readonly progress: string;
   readonly actionHint: string;
   readonly inventory: FoundingInventory;
+  readonly navigation: BeaconNavigation;
   readonly paused: boolean;
 }
 
@@ -61,6 +71,11 @@ export interface AurastriaSceneHandle {
   readonly scene: Scene;
   readonly hud: AurastriaHud;
   getPlayerPosition(): Readonly<{ x: number; y: number; z: number }>;
+  saveState(): SaveStateInput;
+  loadState(state: SaveStateInput): void;
+  setPaused(paused: boolean): void;
+  setTouchMove(direction: Readonly<{ x: number; y: number }> | null): void;
+  triggerAction(action: "interact" | "gather" | "pause"): void;
   onStatus(listener: (status: string) => void): () => void;
   onHud(listener: (hud: AurastriaHud) => void): () => void;
   dispose(): void;
@@ -74,79 +89,69 @@ function createMaterial(scene: Scene, name: string, color: string, emissive?: st
   return material;
 }
 
-function createTerrainMaterials(scene: Scene): Readonly<Record<RiverSpineTileKind, readonly StandardMaterial[]>> {
-  const variants = (name: string, primary: string, secondary?: string): readonly StandardMaterial[] => [
-    createMaterial(scene, `${name}-base`, primary, secondary),
-    createMaterial(scene, `${name}-sunlit`, Color3.FromHexString(primary).scale(1.025).toHexString(), secondary),
-    createMaterial(scene, `${name}-deep`, Color3.FromHexString(primary).scale(0.94).toHexString(), secondary),
-  ];
-
-  return {
-    grass: variants("terrain-grass", "#3D6247"),
-    fertile: variants("terrain-fertile", "#62733E"),
-    river: variants("terrain-river", "#246F76", "#0E3037"),
-    shallows: variants("terrain-shallows", "#37878B", "#155B5D"),
-    sandbar: variants("terrain-sandbar", "#B89B64"),
-    trail: variants("terrain-trail", "#806440"),
-    grove: variants("terrain-grove", "#1C4636"),
-  };
-}
-
 function toWorldPosition(x: number, y: number): Vector3 {
   return new Vector3((x - MAP_WIDTH / 2) * TILE_WORLD_SIZE, 0, (y - MAP_HEIGHT / 2) * TILE_WORLD_SIZE);
 }
 
-function buildFoundingCamp(scene: Scene): void {
-  const timber = createMaterial(scene, "camp-timber", "#6B4328");
-  const roof = createMaterial(scene, "camp-roof", "#967040");
-  const hearth = createMaterial(scene, "camp-hearth", "#D9A549", "#4B2807");
-  const supply = createMaterial(scene, "camp-supply", "#9E6C39");
-  const lantern = createMaterial(scene, "camp-lantern", "#F4C269", "#D77C23");
-  const campOrigin = toWorldPosition(7, 12);
+function buildPaintedTerrainPlate(scene: Scene): void {
+  const terrain = MeshBuilder.CreateGround("great-river-painted-terrain", {
+    width: MAP_WIDTH * TILE_WORLD_SIZE * 1.65,
+    height: MAP_HEIGHT * TILE_WORLD_SIZE * 1.65,
+    subdivisions: 1,
+  }, scene);
+  terrain.position.y = -0.17;
+  terrain.isPickable = false;
 
+  const material = new StandardMaterial("great-river-painted-material", scene);
+  const terrainTexture = new Texture(GREAT_RIVER_MOBILE_PLATE_URL, scene, false, false);
+  terrainTexture.hasAlpha = false;
+  material.diffuseTexture = terrainTexture;
+  material.diffuseColor = Color3.White();
+  material.emissiveColor = Color3.FromHexString("#18342C");
+  material.specularColor = Color3.Black();
+  terrain.material = material;
+}
+
+function buildIllustratedGroundMarker(scene: Scene, name: string, source: string, position: Vector3, size: number): Mesh {
+  const marker = MeshBuilder.CreatePlane(name, { size }, scene);
+  marker.rotation.x = Math.PI / 2;
+  marker.position = position.clone();
+  marker.isPickable = false;
+
+  const material = new StandardMaterial(`${name}-material`, scene);
+  const texture = new Texture(source, scene, false, false);
+  texture.hasAlpha = true;
+  material.diffuseTexture = texture;
+  material.opacityTexture = texture;
+  material.useAlphaFromDiffuseTexture = true;
+  material.specularColor = Color3.Black();
+  material.backFaceCulling = false;
+  material.disableLighting = true;
+  marker.material = material;
+  return marker;
+}
+
+function buildFoundingCamp(scene: Scene): void {
+  const campOrigin = toWorldPosition(7, 12);
+  const marker = buildIllustratedGroundMarker(scene, "founding-camp-marker", FOUNDING_CAMP_MARKER_URL, campOrigin.add(new Vector3(0, 0.035, 0)), 6.7);
+  marker.setEnabled(false);
+
+  const timber = createMaterial(scene, "camp-timber", "#70452C");
+  const roof = createMaterial(scene, "camp-roof", "#A57942");
+  const hearth = createMaterial(scene, "camp-hearth", "#F0AC4E", "#73390E");
   [
     { x: 0, z: 0, scale: 1 },
-    { x: 2.4, z: -0.7, scale: 0.82 },
-    { x: -2.1, z: -1.1, scale: 0.72 },
+    { x: 1.82, z: -0.62, scale: 0.75 },
+    { x: -1.64, z: -0.84, scale: 0.72 },
   ].forEach(({ x, z, scale }, index) => {
-    const body = MeshBuilder.CreateBox(`camp-home-${index}`, { width: 1.8 * scale, height: 0.72 * scale, depth: 1.25 * scale }, scene);
-    body.position = campOrigin.add(new Vector3(x, 0.45 * scale, z));
-    body.material = timber;
-
-    const roofMesh = MeshBuilder.CreateCylinder(`camp-roof-${index}`, { height: 1.05 * scale, diameterTop: 0, diameterBottom: 2.15 * scale, tessellation: 4 }, scene);
-    roofMesh.rotation.y = Math.PI / 4;
-    roofMesh.position = campOrigin.add(new Vector3(x, 1.26 * scale, z));
-    roofMesh.material = roof;
+    const shelter = MeshBuilder.CreateCylinder(`camp-shelter-${index}`, { height: 0.7 * scale, diameterTop: 0.34 * scale, diameterBottom: 1.62 * scale, tessellation: 5 }, scene);
+    shelter.position = campOrigin.add(new Vector3(x, 0.36 * scale, z));
+    shelter.rotation.y = Math.PI / 5 + index * 0.38;
+    shelter.material = index === 0 ? roof : timber;
   });
-
-  const fire = MeshBuilder.CreateSphere("camp-hearth", { diameter: 0.52, segments: 8 }, scene);
-  fire.position = campOrigin.add(new Vector3(0.25, 0.37, 1.95));
+  const fire = MeshBuilder.CreateSphere("camp-hearth", { diameter: 0.38, segments: 6 }, scene);
+  fire.position = campOrigin.add(new Vector3(0.1, 0.25, 1.38));
   fire.material = hearth;
-
-  [
-    { x: -1.45, z: 1.1, rotation: Math.PI / 2 },
-    { x: 1.3, z: 1.35, rotation: Math.PI / 2 },
-  ].forEach(({ x, z, rotation }, index) => {
-    const log = MeshBuilder.CreateCylinder(`camp-log-${index}`, { height: 1.3, diameter: 0.24, tessellation: 6 }, scene);
-    log.rotation.z = Math.PI / 2;
-    log.rotation.y = rotation;
-    log.position = campOrigin.add(new Vector3(x, 0.2, z));
-    log.material = timber;
-  });
-
-  [
-    { x: -2.2, z: 0.75, height: 0.42 },
-    { x: -1.85, z: 1.1, height: 0.58 },
-  ].forEach(({ x, z, height }, index) => {
-    const crate = MeshBuilder.CreateBox(`camp-supply-${index}`, { width: 0.5, height, depth: 0.48 }, scene);
-    crate.position = campOrigin.add(new Vector3(x, height / 2, z));
-    crate.rotation.y = index * 0.24;
-    crate.material = supply;
-  });
-
-  const campLantern = MeshBuilder.CreateSphere("camp-lantern", { diameter: 0.2, segments: 6 }, scene);
-  campLantern.position = campOrigin.add(new Vector3(1.9, 1.1, 0.55));
-  campLantern.material = lantern;
 }
 
 function buildRiverArtDetails(scene: Scene, details: ReturnType<typeof deriveRiverArtDirection>["details"]): void {
@@ -209,15 +214,16 @@ function buildRiverArtDetails(scene: Scene, details: ReturnType<typeof deriveRiv
 }
 
 function buildTideglassBeacon(scene: Scene, position: Vector3): Mesh {
-  const stone = createMaterial(scene, "beacon-stone", "#31484A");
-  const glow = createMaterial(scene, "beacon-glow", "#3B9A9F", "#2FD4D3");
-  const base = MeshBuilder.CreateCylinder("tideglass-beacon-base", { height: 1.02, diameterTop: 1.06, diameterBottom: 1.45, tessellation: 6 }, scene);
-  base.position = position.add(new Vector3(0, 0.36, 0));
+  const marker = buildIllustratedGroundMarker(scene, "tideglass-beacon-sprite", TIDEGLASS_BEACON_SPRITE_URL, position.add(new Vector3(0, 0.06, 0)), 4.6);
+  marker.setEnabled(false);
+  const stone = createMaterial(scene, "beacon-stone", "#3A5B58", "#0C201F");
+  const glow = createMaterial(scene, "beacon-glow", "#47BFC1", "#39DDD8");
+  const base = MeshBuilder.CreateCylinder("tideglass-beacon-base", { height: 0.18, diameterTop: 1.26, diameterBottom: 1.48, tessellation: 8 }, scene);
+  base.position = position.add(new Vector3(0, 0.08, 0));
   base.material = stone;
-
-  const beacon = MeshBuilder.CreateCylinder("tideglass-beacon", { height: 3.35, diameterTop: 0.08, diameterBottom: 0.58, tessellation: 5 }, scene);
-  beacon.position = position.add(new Vector3(0, 2.3, 0));
-  beacon.rotation.y = Math.PI / 5;
+  const beacon = MeshBuilder.CreateSphere("tideglass-beacon", { diameter: 0.66, segments: 8 }, scene);
+  beacon.scaling.y = 0.72;
+  beacon.position = position.add(new Vector3(0, 0.38, 0));
   beacon.material = glow;
   return beacon;
 }
@@ -273,47 +279,14 @@ function buildGatherNodes(scene: Scene): GatherNode[] {
 
 function buildRiverSpineTerrain(scene: Scene): RiverTerrainRuntime {
   const map = generateGreatRiverSpine({ width: MAP_WIDTH, height: MAP_HEIGHT });
-  const terrainMaterials = createTerrainMaterials(scene);
   const visualPlan = deriveRiverArtDirection(map);
-  const terrainBatches = new Map<string, Mesh[]>();
-  const waterMaterials = new Map<StandardMaterial, { material: StandardMaterial; baseEmissive: Color3; phase: number }>();
-
-  map.tiles.forEach((tile) => {
-    const mesh = MeshBuilder.CreateBox(`tile-${tile.position.x}-${tile.position.y}`, { width: TILE_WORLD_SIZE, depth: TILE_WORLD_SIZE, height: 0.18 }, scene);
-    const worldPosition = toWorldPosition(tile.position.x, tile.position.y);
-    const baseY = tile.kind === "river" ? -0.12 : tile.kind === "shallows" ? -0.03 : 0;
-    mesh.position = new Vector3(worldPosition.x, baseY, worldPosition.z);
-    const materialVariants = terrainMaterials[tile.kind];
-    const materialVariant = Math.floor(tile.elevation * 100) % materialVariants.length;
-    const material = materialVariants[materialVariant];
-    mesh.material = material;
-    const batchKey = `${tile.kind}-${materialVariant}`;
-    const batch = terrainBatches.get(batchKey) ?? [];
-    batch.push(mesh);
-    terrainBatches.set(batchKey, batch);
-    if (tile.kind === "river" || tile.kind === "shallows") {
-      waterMaterials.set(material, {
-        material,
-        baseEmissive: material.emissiveColor.clone(),
-        phase: materialVariant * 0.78 + (tile.kind === "shallows" ? 0.42 : 0),
-      });
-    }
-  });
-
-  Array.from(terrainBatches.entries()).forEach(([batchKey, meshes]) => {
-    const merged = Mesh.MergeMeshes(meshes, true, true, undefined, false, true);
-    if (merged) {
-      merged.name = `terrain-batch-${batchKey}`;
-      merged.isPickable = false;
-    }
-  });
-
+  buildPaintedTerrainPlate(scene);
   buildRiverArtDetails(scene, visualPlan.details);
   buildFoundingCamp(scene);
   const beaconPosition = toWorldPosition(visualPlan.landmarkTile.x, visualPlan.landmarkTile.y);
   const beacon = buildTideglassBeacon(scene, beaconPosition);
   const motes = buildRiverMotes(scene, beaconPosition, map.seed);
-  return { waterMaterials: Array.from(waterMaterials.values()), beacon, beaconPosition, motes };
+  return { worldSeed: map.seed, waterMaterials: [], beacon, beaconPosition, motes };
 }
 
 export function createAurastriaScene(engine: Engine, canvas: HTMLCanvasElement): AurastriaSceneHandle {
@@ -328,19 +301,26 @@ export function createAurastriaScene(engine: Engine, canvas: HTMLCanvasElement):
     progress: "0/3 reeds · 0/2 stones",
     actionHint: "Follow the turquoise beacon to begin the founding task.",
     inventory: { "river-reed": 0, "smooth-stone": 0 },
+    navigation: { bearingDegrees: 0, distance: 0 },
     paused: false,
   };
 
-  const player = MeshBuilder.CreateCylinder("wanderer", { height: 1.35, diameterTop: 0.42, diameterBottom: 0.64, tessellation: 6 }, scene);
+  const player = MeshBuilder.CreateCylinder("wanderer", { height: 0.16, diameter: 0.84, tessellation: 12 }, scene);
   player.position = toWorldPosition(10, 14);
-  player.position.y = 0.72;
-  player.material = createMaterial(scene, "wanderer-material", "#D8A940", "#3D2707");
+  player.position.y = 0.09;
+  player.material = createMaterial(scene, "wanderer-material", "#E5BC55", "#5A3D14");
+  const playerChevron = MeshBuilder.CreateCylinder("wanderer-heading", { height: 0.06, diameterTop: 0, diameterBottom: 0.44, tessellation: 3 }, scene);
+  playerChevron.position = player.position.add(new Vector3(0, 0.12, 0.24));
+  playerChevron.rotation.y = Math.PI;
+  playerChevron.material = createMaterial(scene, "wanderer-heading-material", "#2E5A55", "#12322D");
+  const playerToken = buildIllustratedGroundMarker(scene, "tidewalker-token", TIDEWALKER_TOKEN_URL, player.position.add(new Vector3(0, -0.63, 0)), 2.05);
+  playerToken.setEnabled(false);
 
-  const camera = new ArcRotateCamera("river-spine-camera", -Math.PI / 2, 1.08, 27, player.position.clone(), scene);
-  camera.lowerRadiusLimit = 15;
-  camera.upperRadiusLimit = 34;
-  camera.lowerBetaLimit = 0.65;
-  camera.upperBetaLimit = 1.34;
+  const camera = new ArcRotateCamera("river-spine-camera", -Math.PI / 2, 0.56, 21, player.position.clone(), scene);
+  camera.lowerRadiusLimit = 16;
+  camera.upperRadiusLimit = 28;
+  camera.lowerBetaLimit = 0.42;
+  camera.upperBetaLimit = 0.76;
   camera.wheelPrecision = 45;
   camera.attachControl(canvas, true);
 
@@ -381,6 +361,22 @@ export function createAurastriaScene(engine: Engine, canvas: HTMLCanvasElement):
   let beaconArrivalStartedAt: number | undefined;
   let wasNearBeacon = false;
   let lastActionHint = hud.actionHint;
+  let touchMove: Readonly<{ x: number; y: number }> | null = null;
+  let lastNavigationUpdateAt = 0;
+
+  const syncPlayerMarker = () => {
+    playerToken.position.set(player.position.x, 0.09, player.position.z);
+    playerToken.rotation.y = player.rotation.y;
+    playerChevron.position.set(player.position.x, 0.12, player.position.z);
+    playerChevron.position.addInPlace(new Vector3(Math.sin(player.rotation.y) * 0.25, 0, Math.cos(player.rotation.y) * 0.25));
+    playerChevron.rotation.y = player.rotation.y;
+  };
+
+  const currentNavigation = () => beaconNavigation(
+    { x: player.position.x, z: player.position.z },
+    { x: terrainRuntime.beaconPosition.x, z: terrainRuntime.beaconPosition.z },
+  );
+  hud = { ...hud, navigation: currentNavigation() };
 
   const publishHud = (actionHint: string) => {
     hud = {
@@ -388,8 +384,16 @@ export function createAurastriaScene(engine: Engine, canvas: HTMLCanvasElement):
       progress: foundingProgress(quest),
       actionHint,
       inventory: quest.inventory,
+      navigation: currentNavigation(),
       paused: hud.paused,
     };
+    events.emit("hud", hud);
+  };
+
+  const publishNavigation = (nowMs: number) => {
+    if (nowMs - lastNavigationUpdateAt < 180) return;
+    lastNavigationUpdateAt = nowMs;
+    hud = { ...hud, navigation: currentNavigation() };
     events.emit("hud", hud);
   };
 
@@ -406,6 +410,19 @@ export function createAurastriaScene(engine: Engine, canvas: HTMLCanvasElement):
     hud = { ...hud, paused };
     events.emit("hud", hud);
     events.emit("status", paused ? "Journey paused. The river waits without judgment." : "Journey resumed. Follow the river’s living light.");
+  };
+
+  const loadState = (state: SaveStateInput) => {
+    if (state.regionId !== "great-river-spine") {
+      events.emit("status", "This save belongs to a region not yet reachable in the current journey slice.");
+      return;
+    }
+    player.position.set(state.playerPosition.x, state.playerPosition.y, state.playerPosition.z);
+    syncPlayerMarker();
+    camera.target.copyFrom(player.position);
+    quest = restoreFoundingQuest(state);
+    publishHud("Journey restored. Follow the river’s living light.");
+    events.emit("status", "Journey restored from the river archive.");
   };
 
   const attemptInteract = () => {
@@ -462,6 +479,16 @@ export function createAurastriaScene(engine: Engine, canvas: HTMLCanvasElement):
       ? "Materials complete. Return to Founding Camp and press E / A to deliver them."
       : "Continue gathering beside the river; every material is recorded for the shared camp.");
     events.emit("status", `Collected ${label}. ${foundingProgress(quest)}.`);
+  };
+
+  const triggerAction = (action: "interact" | "gather" | "pause") => {
+    if (action === "pause") {
+      setPaused(!hud.paused);
+      return;
+    }
+    if (hud.paused) return;
+    if (action === "interact") attemptInteract();
+    if (action === "gather") attemptGather();
   };
 
   const onKeyDown = (event: KeyboardEvent) => {
@@ -557,7 +584,7 @@ export function createAurastriaScene(engine: Engine, canvas: HTMLCanvasElement):
       return;
     }
 
-    const inputDirection = combinedMoveDirection(pressed, gamepad);
+    const inputDirection = touchMove ?? combinedMoveDirection(pressed, gamepad);
     const direction = new Vector3(inputDirection.x, 0, inputDirection.y);
     if (direction.lengthSquared() === 0) {
       return;
@@ -569,6 +596,8 @@ export function createAurastriaScene(engine: Engine, canvas: HTMLCanvasElement):
     player.position.x = nextX;
     player.position.z = nextZ;
     player.rotation.y = Math.atan2(direction.x, direction.z);
+    syncPlayerMarker();
+    publishNavigation(performance.now());
     camera.target.copyFrom(player.position);
   });
 
@@ -578,6 +607,15 @@ export function createAurastriaScene(engine: Engine, canvas: HTMLCanvasElement):
       return hud;
     },
     getPlayerPosition: () => ({ x: player.position.x, y: player.position.y, z: player.position.z }),
+    saveState: () => createSceneSaveState({
+      worldSeed: terrainRuntime.worldSeed,
+      playerPosition: { x: player.position.x, y: player.position.y, z: player.position.z },
+      quest,
+    }),
+    loadState,
+    setPaused,
+    setTouchMove: (direction) => { touchMove = direction; },
+    triggerAction,
     onStatus: (listener) => events.on("status", listener),
     onHud: (listener) => events.on("hud", listener),
     dispose: () => {

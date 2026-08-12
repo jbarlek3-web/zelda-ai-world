@@ -20,6 +20,10 @@
 | River wanderer token | `/manus-storage/aurastria-river-wanderer-token_679fb640.png` | Future character/HUD and accessible map-marker reference. |
 | Aurastria UI insignia | `/manus-storage/aurastria-ui-insignia_796d052c.png` | Original menu ornament; no real-world cultural symbols or motifs. |
 | Riverbank motif | `/manus-storage/aurastria-riverbank-motif_6173947e.png` | Decorative UI/region-card environmental detail. |
+| Great River Spine mobile terrain plate | `/manus-storage/aurastria-great-river-mobile-plate_e54226c6.png` | Continuous 4:3 illustrated ground surface that replaces visible prototype grid tiles in the mobile scene. |
+| Tidewalker token | `/manus-storage/aurastria-tidewalker-token_62d240e1.png` | Future player-map token and character-marker art; fictional river-scout design. |
+| Founding Camp marker | `/manus-storage/aurastria-founding-camp-marker_c7a362ba.png` | Compact settlement landmark art for map and in-world camp treatment. |
+| Tideglass Beacon sprite | `/manus-storage/aurastria-tideglass-beacon-sprite_2655aa3a.png` | Focal objective landmark art for the Great River Spine. |
 
 The generation service initially supplies live placeholders at these URLs while rendering completes. The implementation must reference the URLs exactly as shown and must not copy the generated image files into the project tree.
 

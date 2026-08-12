@@ -5,6 +5,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { defineConfig, type Plugin, type ViteDevServer } from "vite";
 import { vitePluginManusRuntime } from "vite-plugin-manus-runtime";
+import { VitePWA } from "vite-plugin-pwa";
 
 // =============================================================================
 // Manus Debug Collector - Vite Plugin
@@ -150,7 +151,43 @@ function vitePluginManusDebugCollector(): Plugin {
   };
 }
 
-const plugins = [react(), tailwindcss(), jsxLocPlugin(), vitePluginManusRuntime(), vitePluginManusDebugCollector()];
+const plugins = [
+  react(),
+  tailwindcss(),
+  jsxLocPlugin(),
+  vitePluginManusRuntime(),
+  VitePWA({
+    registerType: "autoUpdate",
+    manifest: {
+      name: "Aurastria: Spirits of the First Dawn",
+      short_name: "Aurastria",
+      description: "A mobile-first mythic river expedition.",
+      theme_color: "#08251e",
+      background_color: "#06130f",
+      display: "standalone",
+      orientation: "portrait-primary",
+      start_url: "/",
+      icons: [
+        { src: "/pwa-icon.svg", sizes: "any", type: "image/svg+xml", purpose: "any maskable" },
+      ],
+    },
+    workbox: {
+      navigateFallback: "/index.html",
+      globPatterns: ["**/*.{js,css,html,svg,woff2,png,webp}"],
+      runtimeCaching: [
+        {
+          urlPattern: ({ url }) => url.pathname.startsWith("/manus-storage/"),
+          handler: "CacheFirst",
+          options: {
+            cacheName: "aurastria-art-assets",
+            expiration: { maxEntries: 12, maxAgeSeconds: 60 * 60 * 24 * 30 },
+          },
+        },
+      ],
+    },
+  }),
+  vitePluginManusDebugCollector(),
+];
 
 export default defineConfig({
   plugins,
