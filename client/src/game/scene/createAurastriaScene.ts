@@ -39,9 +39,11 @@ const MAP_WIDTH = 32;
 const MAP_HEIGHT = 24;
 const PLAYER_SPEED = 7;
 const GREAT_RIVER_MOBILE_PLATE_URL = "/manus-storage/aurastria-great-river-mobile-plate_e54226c6.png";
-const TIDEWALKER_TOKEN_URL = "/manus-storage/aurastria-tidewalker-token_62d240e1.png";
-const FOUNDING_CAMP_MARKER_URL = "/manus-storage/aurastria-founding-camp-marker_c7a362ba.png";
-const TIDEGLASS_BEACON_SPRITE_URL = "/manus-storage/aurastria-tideglass-beacon-sprite_2655aa3a.png";
+const TIDEWALKER_TOKEN_URL = "/manus-storage/aurastria-tidewalker-topdown-token_7e07a69d.png";
+const FOUNDING_CAMP_MARKER_URL = "/manus-storage/aurastria-founding-camp-topdown-marker_7b81fbfb.png";
+const TIDEGLASS_BEACON_SPRITE_URL = "/manus-storage/aurastria-tideglass-topdown-beacon_7ba6abb8.png";
+const RIVER_REED_TOKEN_URL = "/manus-storage/aurastria-river-reed-topdown-token_e3a0da75.png";
+const SMOOTH_STONE_TOKEN_URL = "/manus-storage/aurastria-smooth-stone-topdown-token_4da7b272.png";
 
 interface RiverTerrainRuntime {
   readonly worldSeed: number;
@@ -133,24 +135,27 @@ function buildIllustratedGroundMarker(scene: Scene, name: string, source: string
 
 function buildFoundingCamp(scene: Scene): void {
   const campOrigin = toWorldPosition(7, 12);
-  const marker = buildIllustratedGroundMarker(scene, "founding-camp-marker", FOUNDING_CAMP_MARKER_URL, campOrigin.add(new Vector3(0, 0.035, 0)), 6.7);
+  const marker = buildIllustratedGroundMarker(scene, "founding-camp-marker", FOUNDING_CAMP_MARKER_URL, campOrigin.add(new Vector3(0, 0.04, 0)), 4.8);
   marker.setEnabled(false);
 
   const timber = createMaterial(scene, "camp-timber", "#70452C");
   const roof = createMaterial(scene, "camp-roof", "#A57942");
   const hearth = createMaterial(scene, "camp-hearth", "#F0AC4E", "#73390E");
+  const campRing = MeshBuilder.CreateCylinder("camp-ring", { height: 0.08, diameter: 3.1, tessellation: 12 }, scene);
+  campRing.position = campOrigin.add(new Vector3(0, 0.04, 0));
+  campRing.material = timber;
   [
-    { x: 0, z: 0, scale: 1 },
-    { x: 1.82, z: -0.62, scale: 0.75 },
-    { x: -1.64, z: -0.84, scale: 0.72 },
+    { x: 0.84, z: -0.55, scale: 0.86 },
+    { x: -0.8, z: -0.44, scale: 0.78 },
+    { x: 0.05, z: 0.88, scale: 0.74 },
   ].forEach(({ x, z, scale }, index) => {
-    const shelter = MeshBuilder.CreateCylinder(`camp-shelter-${index}`, { height: 0.7 * scale, diameterTop: 0.34 * scale, diameterBottom: 1.62 * scale, tessellation: 5 }, scene);
-    shelter.position = campOrigin.add(new Vector3(x, 0.36 * scale, z));
+    const shelter = MeshBuilder.CreateCylinder(`camp-shelter-${index}`, { height: 0.78 * scale, diameterTop: 0.02, diameterBottom: 1.08 * scale, tessellation: 5 }, scene);
+    shelter.position = campOrigin.add(new Vector3(x, 0.42 * scale, z));
     shelter.rotation.y = Math.PI / 5 + index * 0.38;
-    shelter.material = index === 0 ? roof : timber;
+    shelter.material = roof;
   });
-  const fire = MeshBuilder.CreateSphere("camp-hearth", { diameter: 0.38, segments: 6 }, scene);
-  fire.position = campOrigin.add(new Vector3(0.1, 0.25, 1.38));
+  const fire = MeshBuilder.CreateSphere("camp-hearth", { diameter: 0.44, segments: 6 }, scene);
+  fire.position = campOrigin.add(new Vector3(0, 0.28, 0));
   fire.material = hearth;
 }
 
@@ -214,18 +219,34 @@ function buildRiverArtDetails(scene: Scene, details: ReturnType<typeof deriveRiv
 }
 
 function buildTideglassBeacon(scene: Scene, position: Vector3): Mesh {
-  const marker = buildIllustratedGroundMarker(scene, "tideglass-beacon-sprite", TIDEGLASS_BEACON_SPRITE_URL, position.add(new Vector3(0, 0.06, 0)), 4.6);
-  marker.setEnabled(false);
+  const marker = buildIllustratedGroundMarker(scene, "tideglass-beacon-sprite", TIDEGLASS_BEACON_SPRITE_URL, position.add(new Vector3(0, 0.07, 0)), 3.7);
   const stone = createMaterial(scene, "beacon-stone", "#3A5B58", "#0C201F");
   const glow = createMaterial(scene, "beacon-glow", "#47BFC1", "#39DDD8");
+  glow.disableLighting = true;
   const base = MeshBuilder.CreateCylinder("tideglass-beacon-base", { height: 0.18, diameterTop: 1.26, diameterBottom: 1.48, tessellation: 8 }, scene);
   base.position = position.add(new Vector3(0, 0.08, 0));
   base.material = stone;
-  const beacon = MeshBuilder.CreateSphere("tideglass-beacon", { diameter: 0.66, segments: 8 }, scene);
-  beacon.scaling.y = 0.72;
-  beacon.position = position.add(new Vector3(0, 0.38, 0));
+  const beacon = MeshBuilder.CreateCylinder("tideglass-beacon", { height: 1.28, diameterTop: 0.02, diameterBottom: 0.62, tessellation: 5 }, scene);
+  beacon.position = position.add(new Vector3(0, 0.72, 0));
   beacon.material = glow;
+  marker.setEnabled(false);
   return beacon;
+}
+
+function buildTideglassRoute(scene: Scene, start: Vector3, destination: Vector3): void {
+  const routeMaterial = createMaterial(scene, "tideglass-route", "#87EEE2", "#43BFB5");
+  routeMaterial.disableLighting = true;
+  routeMaterial.alpha = 0.82;
+  const delta = destination.subtract(start);
+  const markerCount = 7;
+  for (let index = 1; index <= markerCount; index += 1) {
+    const progress = index / (markerCount + 1);
+    const marker = MeshBuilder.CreateCylinder(`tideglass-route-${index}`, { height: 0.045, diameterTop: 0, diameterBottom: 0.26, tessellation: 3 }, scene);
+    const drift = Math.sin(progress * Math.PI * 2) * 0.45;
+    marker.position.set(start.x + delta.x * progress + drift, 0.058, start.z + delta.z * progress);
+    marker.rotation.y = Math.atan2(delta.x, delta.z);
+    marker.material = routeMaterial;
+  }
 }
 
 function buildRiverMotes(scene: Scene, anchor: Vector3, seed: number): readonly { mesh: Mesh; basePosition: Vector3; phase: number }[] {
@@ -266,6 +287,8 @@ function buildGatherNodes(scene: Scene): GatherNode[] {
       const mesh = MeshBuilder.CreateCylinder(`quest-reed-${index}`, { height: 0.82, diameter: 0.15, tessellation: 5 }, scene);
       mesh.position = position.add(new Vector3(0, 0.38, 0));
       mesh.material = reedMaterial;
+      const token = buildIllustratedGroundMarker(scene, `quest-reed-token-${index}`, RIVER_REED_TOKEN_URL, position.add(new Vector3(0, 0.045, 0)), 1.35);
+      token.setEnabled(false);
       return { kind: definition.kind, mesh, position, collected: false };
     }
 
@@ -273,6 +296,8 @@ function buildGatherNodes(scene: Scene): GatherNode[] {
     mesh.scaling.y = 0.56;
     mesh.position = position.add(new Vector3(0, 0.16, 0));
     mesh.material = stoneMaterial;
+    const token = buildIllustratedGroundMarker(scene, `quest-stone-token-${index}`, SMOOTH_STONE_TOKEN_URL, position.add(new Vector3(0, 0.045, 0)), 1.15);
+    token.setEnabled(false);
     return { kind: definition.kind, mesh, position, collected: false };
   });
 }
@@ -285,6 +310,7 @@ function buildRiverSpineTerrain(scene: Scene): RiverTerrainRuntime {
   buildFoundingCamp(scene);
   const beaconPosition = toWorldPosition(visualPlan.landmarkTile.x, visualPlan.landmarkTile.y);
   const beacon = buildTideglassBeacon(scene, beaconPosition);
+  buildTideglassRoute(scene, toWorldPosition(10, 14), beaconPosition);
   const motes = buildRiverMotes(scene, beaconPosition, map.seed);
   return { worldSeed: map.seed, waterMaterials: [], beacon, beaconPosition, motes };
 }
@@ -305,22 +331,31 @@ export function createAurastriaScene(engine: Engine, canvas: HTMLCanvasElement):
     paused: false,
   };
 
-  const player = MeshBuilder.CreateCylinder("wanderer", { height: 0.16, diameter: 0.84, tessellation: 12 }, scene);
+  const player = MeshBuilder.CreateCylinder("wanderer", { height: 0.13, diameter: 1.02, tessellation: 14 }, scene);
   player.position = toWorldPosition(10, 14);
   player.position.y = 0.09;
-  player.material = createMaterial(scene, "wanderer-material", "#E5BC55", "#5A3D14");
-  const playerChevron = MeshBuilder.CreateCylinder("wanderer-heading", { height: 0.06, diameterTop: 0, diameterBottom: 0.44, tessellation: 3 }, scene);
-  playerChevron.position = player.position.add(new Vector3(0, 0.12, 0.24));
+  const playerOuter = createMaterial(scene, "wanderer-material", "#1D5C59", "#0F332F");
+  playerOuter.disableLighting = true;
+  player.material = playerOuter;
+  const playerCore = MeshBuilder.CreateCylinder("wanderer-core", { height: 0.08, diameter: 0.7, tessellation: 14 }, scene);
+  playerCore.position = player.position.add(new Vector3(0, 0.11, 0));
+  const playerCoreMaterial = createMaterial(scene, "wanderer-core-material", "#EBC563", "#8D6422");
+  playerCoreMaterial.disableLighting = true;
+  playerCore.material = playerCoreMaterial;
+  const playerChevron = MeshBuilder.CreateCylinder("wanderer-heading", { height: 0.075, diameterTop: 0, diameterBottom: 0.38, tessellation: 3 }, scene);
+  playerChevron.position = player.position.add(new Vector3(0, 0.16, 0.28));
   playerChevron.rotation.y = Math.PI;
-  playerChevron.material = createMaterial(scene, "wanderer-heading-material", "#2E5A55", "#12322D");
-  const playerToken = buildIllustratedGroundMarker(scene, "tidewalker-token", TIDEWALKER_TOKEN_URL, player.position.add(new Vector3(0, -0.63, 0)), 2.05);
+  const playerChevronMaterial = createMaterial(scene, "wanderer-heading-material", "#DFF9E7", "#B1E7D5");
+  playerChevronMaterial.disableLighting = true;
+  playerChevron.material = playerChevronMaterial;
+  const playerToken = buildIllustratedGroundMarker(scene, "tidewalker-token", TIDEWALKER_TOKEN_URL, player.position.add(new Vector3(0, 0.055, 0)), 1.65);
   playerToken.setEnabled(false);
 
-  const camera = new ArcRotateCamera("river-spine-camera", -Math.PI / 2, 0.56, 21, player.position.clone(), scene);
-  camera.lowerRadiusLimit = 16;
-  camera.upperRadiusLimit = 28;
-  camera.lowerBetaLimit = 0.42;
-  camera.upperBetaLimit = 0.76;
+  const camera = new ArcRotateCamera("river-spine-camera", -Math.PI / 2, 0.64, 26, player.position.clone(), scene);
+  camera.lowerRadiusLimit = 20;
+  camera.upperRadiusLimit = 32;
+  camera.lowerBetaLimit = 0.52;
+  camera.upperBetaLimit = 0.82;
   camera.wheelPrecision = 45;
   camera.attachControl(canvas, true);
 
@@ -365,10 +400,11 @@ export function createAurastriaScene(engine: Engine, canvas: HTMLCanvasElement):
   let lastNavigationUpdateAt = 0;
 
   const syncPlayerMarker = () => {
-    playerToken.position.set(player.position.x, 0.09, player.position.z);
+    playerToken.position.set(player.position.x, 0.055, player.position.z);
     playerToken.rotation.y = player.rotation.y;
-    playerChevron.position.set(player.position.x, 0.12, player.position.z);
-    playerChevron.position.addInPlace(new Vector3(Math.sin(player.rotation.y) * 0.25, 0, Math.cos(player.rotation.y) * 0.25));
+    playerCore.position.set(player.position.x, 0.16, player.position.z);
+    playerChevron.position.set(player.position.x, 0.19, player.position.z);
+    playerChevron.position.addInPlace(new Vector3(Math.sin(player.rotation.y) * 0.28, 0, Math.cos(player.rotation.y) * 0.28));
     playerChevron.rotation.y = player.rotation.y;
   };
 

@@ -24,8 +24,16 @@
 | Tidewalker token | `/manus-storage/aurastria-tidewalker-token_62d240e1.png` | Future player-map token and character-marker art; fictional river-scout design. |
 | Founding Camp marker | `/manus-storage/aurastria-founding-camp-marker_c7a362ba.png` | Compact settlement landmark art for map and in-world camp treatment. |
 | Tideglass Beacon sprite | `/manus-storage/aurastria-tideglass-beacon-sprite_2655aa3a.png` | Focal objective landmark art for the Great River Spine. |
+| Mobile map-asset style reference | `/manus-storage/aurastria-mobile-map-asset-style-reference_7be83773.png` | Original limited-palette top-down expedition token direction for the mobile PWA. |
+| Tidewalker top-down token | `/manus-storage/aurastria-tidewalker-topdown-token_7e07a69d.png` | Replacement player-map token, generated for direct overhead readability. |
+| Founding Camp top-down marker | `/manus-storage/aurastria-founding-camp-topdown-marker_7b81fbfb.png` | Replacement compact camp landmark for the Great River Spine map. |
+| Tideglass top-down beacon | `/manus-storage/aurastria-tideglass-topdown-beacon_7ba6abb8.png` | Replacement objective landmark token for phone-scale navigation. |
+| River reed top-down token | `/manus-storage/aurastria-river-reed-topdown-token_e3a0da75.png` | Replacement gathered-material token for touch-first identification. |
+| Smooth stone top-down token | `/manus-storage/aurastria-smooth-stone-topdown-token_4da7b272.png` | Replacement gathered-material token for touch-first identification. |
 
 The generation service initially supplies live placeholders at these URLs while rendering completes. The implementation must reference the URLs exactly as shown and must not copy the generated image files into the project tree.
+
+**Runtime safeguard:** Active play currently keeps procedural low-poly fallback meshes visible while generated token URLs render as placeholders or lack usable alpha. A generated asset may only replace its fallback after a visual check confirms a transparent, phone-readable result; the fallback avoids black or opaque blocks in the playable map.
 
 ## Asset Processing Pipeline
 1. **Generation:** Use Manus `generate` mode to produce stylized pixel-art sheets on solid magenta backgrounds.

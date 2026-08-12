@@ -85,6 +85,7 @@
 - [x] Implement touch-first movement, interact, gather, and pause controls with safe-area placement and accessible labels
 - [x] Redesign the phone HUD around a compact top status strip, bottom action cluster, and a minimap or navigation compass rather than desktop-card overlays
 - [ ] Replace the current terrain tiles, primitive camp meshes, and player cylinder with a cohesive low-poly or painted-sprite asset system that remains performant on mobile GPUs
+- [x] Add a lightweight original Tideglass route language—dashed river-light markers and landmark emphasis—so the illustrated terrain communicates an actionable path without restoring a visible grid
 - [ ] Validate PWA installability, offline reload, touch controls, visual readability, and frame-time budget at 375×812 and 390×844 viewports
 - [x] Code-split the Babylon gameplay runtime so the title screen and install flow open without downloading the full renderer bundle
 - [x] Implement a functional mobile beacon-navigation compass or minimap that updates from the explorer and Tideglass positions
