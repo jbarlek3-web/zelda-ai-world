@@ -4,11 +4,16 @@ import { createAurastriaScene, type AurastriaSceneHandle } from "@/game/scene/cr
 
 interface GameCanvasProps extends ComponentPropsWithoutRef<"canvas"> {
   readonly onReady?: (handle: AurastriaSceneHandle) => void;
+  readonly onStatus?: (status: string) => void;
 }
 
-export function GameCanvas({ className, onReady, ...canvasProps }: GameCanvasProps) {
+export function GameCanvas({ className, onReady, onStatus, ...canvasProps }: GameCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const initializedRef = useRef(false);
+  const onReadyRef = useRef(onReady);
+  const onStatusRef = useRef(onStatus);
+  onReadyRef.current = onReady;
+  onStatusRef.current = onStatus;
 
   useEffect(() => {
     if (initializedRef.current || !canvasRef.current) {
@@ -20,19 +25,21 @@ export function GameCanvas({ className, onReady, ...canvasProps }: GameCanvasPro
     const engine = new Engine(canvas, true, { preserveDrawingBuffer: false, stencil: true });
     const gameScene = createAurastriaScene(engine, canvas);
     const resize = () => engine.resize();
+    const unsubscribeStatus = gameScene.onStatus((status) => onStatusRef.current?.(status));
 
     engine.runRenderLoop(() => gameScene.scene.render());
     window.addEventListener("resize", resize);
-    onReady?.(gameScene);
+    onReadyRef.current?.(gameScene);
 
     return () => {
       window.removeEventListener("resize", resize);
+      unsubscribeStatus();
       engine.stopRenderLoop();
       gameScene.dispose();
       engine.dispose();
       initializedRef.current = false;
     };
-  }, [onReady]);
+  }, []);
 
   return <canvas ref={canvasRef} className={className} aria-label="Aurastria Great River Spine game view" {...canvasProps} />;
 }

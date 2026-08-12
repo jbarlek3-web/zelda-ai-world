@@ -12,6 +12,17 @@
 | `boss_sheet_rgba` | Regional Boss | Unique attack patterns, vulnerability states |
 | `npc_sheet_rgba` | Tribal NPCs | Merchants, Rulers, Shamans, Warriors |
 
+## Generated Aurastria Visual Assets
+
+| Asset | Web asset URL | Intended use |
+|---|---|---|
+| Great River Spine visual target | `/manus-storage/aurastria-great-river-spine-reference_ae718f24.png` | Primary painterly lighting, material, and settlement-composition reference for the vertical slice. |
+| River wanderer token | `/manus-storage/aurastria-river-wanderer-token_679fb640.png` | Future character/HUD and accessible map-marker reference. |
+| Aurastria UI insignia | `/manus-storage/aurastria-ui-insignia_796d052c.png` | Original menu ornament; no real-world cultural symbols or motifs. |
+| Riverbank motif | `/manus-storage/aurastria-riverbank-motif_6173947e.png` | Decorative UI/region-card environmental detail. |
+
+The generation service initially supplies live placeholders at these URLs while rendering completes. The implementation must reference the URLs exactly as shown and must not copy the generated image files into the project tree.
+
 ## Asset Processing Pipeline
 1. **Generation:** Use Manus `generate` mode to produce stylized pixel-art sheets on solid magenta backgrounds.
 2. **Chroma-Keying:** Apply tight magenta-only transparency rules via offline scripts to produce `*_rgba.png` versions.
