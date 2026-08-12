@@ -34,6 +34,7 @@ const INITIAL_HUD: AurastriaSceneHandle["hud"] = {
   vitality: 3,
   wispHealth: 3,
   strikeReady: true,
+  rollReady: true,
   paused: false,
 };
 
@@ -220,6 +221,7 @@ export default function Home() {
               <span>Satchel · {hud.inventory["river-reed"]} reeds · {hud.inventory["smooth-stone"]} stones</span>
               <span>Vitality · {hud.vitality}/3 · Wisp · {hud.wispHealth}/3</span>
               <span>River-staff · {hud.strikeReady ? "ready" : "recovering"}</span>
+              <span>Roll · {hud.rollReady ? "ready" : "recovering"}</span>
             </div>
             <p className="mt-1 line-clamp-1 text-[0.68rem] leading-4 text-[#c8d7b6] sm:mt-3 sm:line-clamp-2 sm:text-xs sm:leading-5">{hud.actionHint}</p>
             <button type="button" onClick={askGuide} className="mt-2 rounded-full border border-[#69ddd4]/45 bg-[#123f3b]/80 px-2.5 py-1 text-[0.58rem] uppercase tracking-[0.14em] text-[#d5fff7] active:scale-[0.97] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f7e9c2] sm:text-[0.65rem]">Ask the river guide</button>
@@ -227,7 +229,7 @@ export default function Home() {
 
           <section className="ml-auto hidden max-w-sm rounded-sm border border-[#d9b867]/40 bg-[#08251e]/85 px-5 py-4 text-right shadow-[0_14px_55px_rgba(0,0,0,0.36)] backdrop-blur-sm sm:block">
             <p className="font-serif text-lg text-[#f7e9c2]">Founding Camp</p>
-            <p className="mt-1 text-xs uppercase tracking-[0.18em] text-[#d9b867]">WASD / arrows or left stick · E / A interact · F / X gather · Esc / Start pause</p>
+            <p className="mt-1 text-xs uppercase tracking-[0.18em] text-[#d9b867]">WASD / arrows or left stick · E / A interact · F / X gather · J / B strike · K / Shift / Y roll · Esc / Start pause</p>
           </section>
         </div>
       </div>
@@ -237,7 +239,7 @@ export default function Home() {
       {screen === "settings" ? <SettingsMenu uiScale={uiScale} onUiScaleChange={updateUiScale} onClose={() => setScreen(settingsReturnTo)} /> : null}
       {screen === "play" ? <GameMasterRibbon text={gmText} /> : null}
       <NarrativeSheet open={screen === "play" && guideOpen} pending={guideNarration.isPending} text={guideText ?? guideFallback(hud.objective)} onClose={() => { setGuideOpen(false); scene?.setPaused(false); }} />
-      {screen === "play" && !hud.paused ? <TouchControls strikeReady={hud.strikeReady} onMove={(direction) => scene?.setTouchMove(direction)} onAction={(action) => scene?.triggerAction(action)} /> : null}
+      {screen === "play" && !hud.paused ? <TouchControls strikeReady={hud.strikeReady} rollReady={hud.rollReady} onMove={(direction) => scene?.setTouchMove(direction)} onAction={(action) => scene?.triggerAction(action)} /> : null}
     </main>
   );
 }

@@ -22,6 +22,7 @@ import { deriveRiverArtDirection } from "@/game/render/riverArtDirection";
 import { beaconArrivalScale } from "@/game/render/beaconMotion";
 import { beaconNavigation, type BeaconNavigation } from "@/game/navigation/beaconCompass";
 import { combinedMoveDirection, isGamepadActionPressed, isKeyboardAction } from "@/game/input/inputActions";
+import { isRollReady, resolveRoll, rollRejectionMessage } from "@/game/features/movement/dodgeRoll";
 import { createRiverWisp, stepRiverWisp, type RiverWispState } from "@/game/features/combat/riverWispCombat";
 import { createSceneSaveState, restoreFoundingQuest } from "@/game/features/saves/sceneSaveState";
 import { recoverFromRiverWisp } from "@/game/features/survival/foundingLoopRecovery";
@@ -80,6 +81,7 @@ export interface AurastriaHud {
   readonly vitality: number;
   readonly wispHealth: number;
   readonly strikeReady: boolean;
+  readonly rollReady: boolean;
   readonly paused: boolean;
 }
 
@@ -91,7 +93,7 @@ export interface AurastriaSceneHandle {
   loadState(state: SaveStateInput): void;
   setPaused(paused: boolean): void;
   setTouchMove(direction: Readonly<{ x: number; y: number }> | null): void;
-  triggerAction(action: "interact" | "gather" | "strike" | "pause"): void;
+  triggerAction(action: "interact" | "gather" | "strike" | "roll" | "pause"): void;
   onStatus(listener: (status: string) => void): () => void;
   onHud(listener: (hud: AurastriaHud) => void): () => void;
   dispose(): void;
@@ -368,6 +370,7 @@ export function createAurastriaScene(engine: Engine, canvas: HTMLCanvasElement):
     vitality: 3,
     wispHealth: 3,
     strikeReady: true,
+    rollReady: true,
     paused: false,
   };
 
@@ -434,6 +437,7 @@ export function createAurastriaScene(engine: Engine, canvas: HTMLCanvasElement):
   let wasInteractPressed = false;
   let wasGatherPressed = false;
   let wasStrikePressed = false;
+  let wasRollPressed = false;
   let wasPausePressed = false;
   let beaconArrivalStartedAt: number | undefined;
   let wasNearBeacon = false;
@@ -443,6 +447,7 @@ export function createAurastriaScene(engine: Engine, canvas: HTMLCanvasElement):
   let riverWisp: RiverWispState = createRiverWisp();
   let playerVitality = 3;
   let strikeCooldownEndsAt = 0;
+  let rollCooldownEndsAt = 0;
 
   const syncWispEncounter = () => {
     const active = quest.step === "settle-wisp" && riverWisp.phase !== "defeated";
@@ -466,6 +471,13 @@ export function createAurastriaScene(engine: Engine, canvas: HTMLCanvasElement):
     { x: terrainRuntime.beaconPosition.x, z: terrainRuntime.beaconPosition.z },
   );
   const isStrikeReady = () => performance.now() >= strikeCooldownEndsAt;
+  const isPlayerRollReady = () => isRollReady(performance.now(), rollCooldownEndsAt);
+  const worldBounds = {
+    minX: -MAP_WIDTH * TILE_WORLD_SIZE / 2 + 0.6,
+    maxX: MAP_WIDTH * TILE_WORLD_SIZE / 2 - 0.6,
+    minZ: -MAP_HEIGHT * TILE_WORLD_SIZE / 2 + 0.6,
+    maxZ: MAP_HEIGHT * TILE_WORLD_SIZE / 2 - 0.6,
+  } as const;
   const currentObjective = () => quest.step === "settle-wisp" && riverWisp.phase !== "defeated"
     ? "Settle the river wisp before returning to camp"
     : foundingObjective(quest);
@@ -481,6 +493,7 @@ export function createAurastriaScene(engine: Engine, canvas: HTMLCanvasElement):
       vitality: playerVitality,
       wispHealth: riverWisp.health,
       strikeReady: isStrikeReady(),
+      rollReady: isPlayerRollReady(),
       paused: hud.paused,
     };
     events.emit("hud", hud);
@@ -615,7 +628,31 @@ export function createAurastriaScene(engine: Engine, canvas: HTMLCanvasElement):
     publishHud("Your strike finds only water. Move closer to the river wisp.");
   };
 
-  const triggerAction = (action: "interact" | "gather" | "strike" | "pause") => {
+  const attemptRoll = () => {
+    const gamepad = navigator.getGamepads?.()[0] ?? undefined;
+    const result = resolveRoll({
+      origin: { x: player.position.x, z: player.position.z },
+      direction: touchMove ?? combinedMoveDirection(pressed, gamepad),
+      bounds: worldBounds,
+      nowMs: performance.now(),
+      cooldownEndsAtMs: rollCooldownEndsAt,
+    });
+    if (!result.ok) {
+      events.emit("status", rollRejectionMessage(result.reason));
+      return;
+    }
+    rollCooldownEndsAt = result.cooldownEndsAtMs;
+    player.position.x = result.position.x;
+    player.position.z = result.position.z;
+    player.rotation.y = result.headingRadians;
+    syncPlayerMarker();
+    camera.target.copyFrom(player.position);
+    lastNavigationUpdateAt = 0;
+    publishNavigation(performance.now());
+    events.emit("status", "The explorer rolls clear along the riverbank.");
+  };
+
+  const triggerAction = (action: "interact" | "gather" | "strike" | "roll" | "pause") => {
     if (action === "pause") {
       setPaused(!hud.paused);
       return;
@@ -624,6 +661,7 @@ export function createAurastriaScene(engine: Engine, canvas: HTMLCanvasElement):
     if (action === "interact") attemptInteract();
     if (action === "gather") attemptGather();
     if (action === "strike") attemptStrike();
+    if (action === "roll") attemptRoll();
   };
 
   const onKeyDown = (event: KeyboardEvent) => {
@@ -655,6 +693,13 @@ export function createAurastriaScene(engine: Engine, canvas: HTMLCanvasElement):
       event.preventDefault();
       if (!event.repeat) {
         attemptStrike();
+      }
+      return;
+    }
+    if (isKeyboardAction("roll", event.code)) {
+      event.preventDefault();
+      if (!event.repeat) {
+        attemptRoll();
       }
       return;
     }
@@ -710,6 +755,7 @@ export function createAurastriaScene(engine: Engine, canvas: HTMLCanvasElement):
     const interactPressed = isGamepadActionPressed("interact", gamepad);
     const gatherPressed = isGamepadActionPressed("gather", gamepad);
     const strikePressed = isGamepadActionPressed("strike", gamepad);
+    const rollPressed = isGamepadActionPressed("roll", gamepad);
     const pausePressed = isGamepadActionPressed("pause", gamepad);
     if (pausePressed && !wasPausePressed) {
       setPaused(!hud.paused);
@@ -724,9 +770,13 @@ export function createAurastriaScene(engine: Engine, canvas: HTMLCanvasElement):
     if (!hud.paused && strikePressed && !wasStrikePressed) {
       attemptStrike();
     }
+    if (!hud.paused && rollPressed && !wasRollPressed) {
+      attemptRoll();
+    }
     wasInteractPressed = interactPressed;
     wasGatherPressed = gatherPressed;
     wasStrikePressed = strikePressed;
+    wasRollPressed = rollPressed;
     if (hud.paused) {
       return;
     }
@@ -776,8 +826,14 @@ export function createAurastriaScene(engine: Engine, canvas: HTMLCanvasElement):
         }
       }
     }
-    if (hud.strikeReady !== isStrikeReady()) {
-      hud = { ...hud, strikeReady: isStrikeReady(), vitality: playerVitality, wispHealth: riverWisp.health };
+    if (hud.strikeReady !== isStrikeReady() || hud.rollReady !== isPlayerRollReady()) {
+      hud = {
+        ...hud,
+        strikeReady: isStrikeReady(),
+        rollReady: isPlayerRollReady(),
+        vitality: playerVitality,
+        wispHealth: riverWisp.health,
+      };
       events.emit("hud", hud);
     }
 

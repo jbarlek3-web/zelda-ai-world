@@ -17,6 +17,7 @@ describe("Aurastria input actions", () => {
     expect(isKeyboardAction("interact", "KeyE")).toBe(true);
     expect(isKeyboardAction("gather", "KeyE")).toBe(false);
     expect(isKeyboardAction("strike", "Space")).toBe(true);
+    expect(isKeyboardAction("roll", "ShiftLeft")).toBe(true);
     expect(isKeyboardAction("pause", "Escape")).toBe(true);
   });
 });

@@ -1,11 +1,12 @@
 import type { Vec2 } from "@shared/game/types";
 
-export type AurastriaInputAction = "move" | "interact" | "gather" | "strike" | "pause";
+export type AurastriaInputAction = "move" | "interact" | "gather" | "strike" | "roll" | "pause";
 
 export const AURASTRIA_INPUT_BINDINGS: Readonly<Record<Exclude<AurastriaInputAction, "move">, readonly string[]>> = {
   interact: ["KeyE", "Enter"],
   gather: ["KeyF"],
   strike: ["KeyJ", "Space"],
+  roll: ["KeyK", "ShiftLeft", "ShiftRight"],
   pause: ["Escape", "KeyP"],
 };
 
@@ -13,6 +14,7 @@ export const AURASTRIA_GAMEPAD_BINDINGS: Readonly<Record<Exclude<AurastriaInputA
   interact: [0],
   gather: [2],
   strike: [1],
+  roll: [3],
   pause: [9],
 };
 

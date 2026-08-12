@@ -85,6 +85,22 @@
 - [x] Refactor interact, gather, and pause to consume the shared input-action mapping contract instead of hardcoded scene-specific key and gamepad button checks
 - [x] Add a concrete starting inventory state, update it on each collection, and expose its resource counts through the HUD state
 
+## 10D. Dodge-Roll Slice
+- [x] Define a shared dodge-roll action with keyboard, gamepad, and touch mappings; a bounded cooldown; and world-edge clamping
+- [x] Implement scene-level roll movement, reduced-motion-safe presentation, and shared HUD readiness feedback
+- [x] Add focused action/roll tests and verify the control is readable at mobile viewport size
+- [x] Extract roll displacement, cooldown, and edge clamping into a pure deterministic module with unit tests
+
+## 10E. Seeded Determinism Audit
+- [ ] Audit all world/resource/encounter generation for a single seeded RNG instance with no `Math.random` in generation paths
+- [ ] Assert the same seed reproduces an identical world grid, resource layout, and dungeon topology across repeated runs
+- [ ] Validate generated layout reachability (spawn → Tideglass → camp, dungeon entry → boss) and reject unreachable results
+
+## 10F. Measured Mobile Performance Budget
+- [ ] Record a warm-up-stable frame-time, draw-call, and active-mesh sample against the 60 FPS / 16.67 ms mobile budget
+- [ ] Remove per-frame allocations from the render loop hot path (vector/array/object churn)
+- [ ] Fix only the single largest measured bottleneck, then re-measure and report before/after numbers
+
 ## 10A. Great River Encounter Slice
 - [x] Define a deterministic river-wisp combat state machine with hit windows, recovery, defeat, and a no-soft-lock reset path
 - [x] Add a mobile-safe strike action with keyboard and gamepad parity, visible cooldown feedback, and a concise combat objective
