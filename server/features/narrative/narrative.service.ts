@@ -10,6 +10,26 @@ export interface NarrativeContext {
 }
 
 const MAX_ACTION_LENGTH = 280;
+const NARRATIVE_WINDOW_MS = 4_000;
+
+export class NarrativeRateLimiter {
+  private readonly lastRequestAt = new Map<string, number>();
+
+  tryTake(key: string, nowMs: number): boolean {
+    const prior = this.lastRequestAt.get(key);
+    if (prior !== undefined && nowMs - prior < NARRATIVE_WINDOW_MS) {
+      return false;
+    }
+    this.lastRequestAt.set(key, nowMs);
+    if (this.lastRequestAt.size > 500) {
+      const cutoff = nowMs - NARRATIVE_WINDOW_MS;
+      this.lastRequestAt.forEach((value, requestKey) => {
+        if (value < cutoff) this.lastRequestAt.delete(requestKey);
+      });
+    }
+    return true;
+  }
+}
 
 function cleanPlayerAction(value: string): string {
   return value.replace(/[\u0000-\u001F\u007F]/g, " ").replace(/\s+/g, " ").trim().slice(0, MAX_ACTION_LENGTH);

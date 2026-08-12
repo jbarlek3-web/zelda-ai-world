@@ -1,7 +1,10 @@
 import { z } from "zod";
 import { invokeLLM } from "../../_core/llm";
 import { publicProcedure, router } from "../../_core/trpc";
-import { buildNarrativeSystemPrompt, buildNarrativeUserPrompt, fallbackNarration, readNarrativeText } from "./narrative.service";
+import { TRPCError } from "@trpc/server";
+import { buildNarrativeSystemPrompt, buildNarrativeUserPrompt, fallbackNarration, NarrativeRateLimiter, readNarrativeText } from "./narrative.service";
+
+const narrativeRateLimiter = new NarrativeRateLimiter();
 
 const narrativeInput = z.object({
   regionName: z.string().trim().min(1).max(80),
@@ -13,7 +16,11 @@ const narrativeInput = z.object({
 });
 
 export const narrativeRouter = router({
-  narrate: publicProcedure.input(narrativeInput).mutation(async ({ input }) => {
+  narrate: publicProcedure.input(narrativeInput).mutation(async ({ input, ctx }) => {
+    const requestKey = ctx.user ? String(ctx.user.id) : (ctx.req.ip ?? ctx.req.socket.remoteAddress ?? "anonymous");
+    if (!narrativeRateLimiter.tryTake(requestKey, Date.now())) {
+      throw new TRPCError({ code: "TOO_MANY_REQUESTS", message: "The river guide is considering your last question." });
+    }
     const fallback = fallbackNarration(input);
     try {
       const result = await invokeLLM({

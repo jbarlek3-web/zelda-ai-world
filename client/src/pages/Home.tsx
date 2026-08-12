@@ -1,12 +1,17 @@
 import { PauseMenu, SettingsMenu, TitleMenu } from "@/components/game/JourneyMenus";
 import { TouchControls } from "@/components/game/TouchControls";
+import { NarrativeSheet } from "@/components/game/NarrativeSheet";
+import { GameMasterRibbon } from "@/components/game/GameMasterRibbon";
 import type { AurastriaSceneHandle } from "@/game/scene/createAurastriaScene";
 import type { SaveStateInput } from "@shared/game/schemas";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { startLogin } from "@/const";
 import { trpc } from "@/lib/trpc";
 import { GAME_TITLE } from "@shared/game/constants";
-import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { guideFallback } from "@/game/features/narrative/guideNarrative";
+import { resolveNarrativeDisplay } from "@/game/features/narrative/narrativePresentation";
+import { gameMasterMomentForStatus } from "@/game/features/narrative/gameMasterEvents";
+import React, { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>;
@@ -45,12 +50,23 @@ export default function Home() {
   const [online, setOnline] = useState(() => navigator.onLine);
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [installHint, setInstallHint] = useState<string | null>(null);
+  const [guideOpen, setGuideOpen] = useState(false);
+  const [guideText, setGuideText] = useState<string | null>(null);
+  const [gmText, setGmText] = useState<string | null>(null);
   const { isAuthenticated, loading: authLoading } = useAuth();
   const utils = trpc.useUtils();
   const savesQuery = trpc.saves.list.useQuery(undefined, { enabled: isAuthenticated });
   const loadSave = trpc.saves.load.useQuery(selectedSlot, { enabled: false, retry: false });
   const upsertSave = trpc.saves.upsert.useMutation();
   const removeSave = trpc.saves.remove.useMutation();
+  const guideNarration = trpc.narrative.narrate.useMutation({
+    onSuccess: (result) => setGuideText(resolveNarrativeDisplay(result.text, hud.objective)),
+    onError: () => setGuideText(resolveNarrativeDisplay(null, hud.objective)),
+  });
+  const gmNarration = trpc.narrative.narrate.useMutation({
+    onSuccess: (result) => setGmText(resolveNarrativeDisplay(result.text, hud.objective)),
+    onError: () => setGmText(resolveNarrativeDisplay(null, hud.objective)),
+  });
   const savedSlots = savesQuery.data ?? [];
   const selectedSave = useMemo(() => savedSlots.find((save) => save.slot === selectedSlot), [savedSlots, selectedSlot]);
 
@@ -61,6 +77,12 @@ export default function Home() {
       if (parsed >= 90 && parsed <= 120) setUiScale(parsed);
     }
   }, []);
+
+  useEffect(() => {
+    if (!gmText) return;
+    const timeout = window.setTimeout(() => setGmText(null), 8_000);
+    return () => window.clearTimeout(timeout);
+  }, [gmText]);
 
   useEffect(() => {
     const updateConnectivity = () => setOnline(navigator.onLine);
@@ -74,7 +96,7 @@ export default function Home() {
     const isAppleMobile = /iPad|iPhone|iPod/.test(window.navigator.userAgent);
     if (isAppleMobile) {
       setInstallHint("To install on iPhone or iPad, open Share and choose Add to Home Screen.");
-    } else if (!window.matchMedia("(display-mode: standalone)").matches) {
+    } else if (!(typeof window.matchMedia === "function" && window.matchMedia("(display-mode: standalone)").matches)) {
       setInstallHint("When your browser offers installation, choose Install App from its menu to keep the river chart at hand.");
     }
     return () => {
@@ -138,11 +160,40 @@ export default function Home() {
     await utils.saves.list.invalidate();
   };
 
+  const askGuide = () => {
+    scene?.setPaused(true);
+    setGuideOpen(true);
+    setGuideText(null);
+    guideNarration.mutate({
+      regionName: "Great River Spine",
+      settlementName: "Founding Camp",
+      settlementTier: "camp",
+      population: 12,
+      moment: "camp-interaction",
+      playerAction: `The explorer's current objective is: ${hud.objective}. Current progress: ${hud.progress}.`,
+    });
+  };
+
+  const handleGameStatus = (nextStatus: string) => {
+    setStatus(nextStatus);
+    const moment = gameMasterMomentForStatus(nextStatus);
+    if (!moment) return;
+    setGmText(guideFallback(hud.objective));
+    gmNarration.mutate({
+      regionName: "Great River Spine",
+      settlementName: "Founding Camp",
+      settlementTier: "camp",
+      population: 12,
+      moment,
+      playerAction: nextStatus,
+    });
+  };
+
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#06130f] text-[#f7e9c2]" style={{ fontSize: `${uiScale}%`, backgroundImage: `linear-gradient(rgba(3, 18, 14, 0.58), rgba(3, 18, 14, 0.76)), url(${GREAT_RIVER_MOBILE_PLATE_URL})`, backgroundPosition: "center", backgroundSize: "cover" }}>
       {screen === "play" ? (
         <Suspense fallback={<div className="absolute inset-0 grid place-items-center bg-[#06130f]/75 text-sm uppercase tracking-[0.2em] text-[#d9b867]">Preparing river chart…</div>}>
-          <GameCanvas className="absolute inset-0 h-full w-full touch-none" onReady={handleGameReady} onHud={setHud} onStatus={setStatus} />
+          <GameCanvas className="absolute inset-0 h-full w-full touch-none" onReady={handleGameReady} onHud={setHud} onStatus={handleGameStatus} />
         </Suspense>
       ) : null}
       <div className={`pointer-events-none relative z-10 flex min-h-screen flex-col justify-between px-3 pb-[max(1rem,env(safe-area-inset-bottom))] pt-[max(0.75rem,env(safe-area-inset-top))] sm:px-8 sm:pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:pt-[max(1.25rem,env(safe-area-inset-top))] lg:px-12 ${screen === "play" && !hud.paused ? "" : "opacity-55"}`}>
@@ -159,7 +210,7 @@ export default function Home() {
         </header>
 
         <div className="mb-24 flex flex-col-reverse gap-3 sm:mb-0 sm:flex-row sm:items-end sm:justify-between">
-          <section aria-live="polite" className="max-w-sm rounded-sm border border-[#d9b867]/40 bg-[#08251e]/85 px-3 py-2 shadow-[0_14px_55px_rgba(0,0,0,0.36)] backdrop-blur-sm sm:px-5 sm:py-4">
+          <section aria-live="polite" className="pointer-events-auto max-w-sm rounded-sm border border-[#d9b867]/40 bg-[#08251e]/85 px-3 py-2 shadow-[0_14px_55px_rgba(0,0,0,0.36)] backdrop-blur-sm sm:px-5 sm:py-4">
             <p className="text-[0.55rem] uppercase tracking-[0.18em] text-[#d9b867] sm:text-[0.65rem] sm:tracking-[0.2em]">Founding Objective</p>
             <p className="mt-1 font-serif text-base leading-tight text-[#f7e9c2] sm:text-lg">{hud.objective}</p>
             <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[0.65rem] uppercase tracking-[0.1em] text-[#d9b867] sm:block sm:text-xs sm:tracking-[0.15em]">
@@ -169,6 +220,7 @@ export default function Home() {
               <span>River-staff · {hud.strikeReady ? "ready" : "recovering"}</span>
             </div>
             <p className="mt-1 line-clamp-1 text-[0.68rem] leading-4 text-[#c8d7b6] sm:mt-3 sm:line-clamp-2 sm:text-xs sm:leading-5">{hud.actionHint}</p>
+            <button type="button" onClick={askGuide} className="mt-2 rounded-full border border-[#69ddd4]/45 bg-[#123f3b]/80 px-2.5 py-1 text-[0.58rem] uppercase tracking-[0.14em] text-[#d5fff7] active:scale-[0.97] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f7e9c2] sm:text-[0.65rem]">Ask the river guide</button>
           </section>
 
           <section className="ml-auto hidden max-w-sm rounded-sm border border-[#d9b867]/40 bg-[#08251e]/85 px-5 py-4 text-right shadow-[0_14px_55px_rgba(0,0,0,0.36)] backdrop-blur-sm sm:block">
@@ -180,6 +232,8 @@ export default function Home() {
       {screen === "title" ? <TitleMenu signedIn={isAuthenticated} online={online} canInstall={installPrompt !== null} installHint={installPrompt ? null : installHint} slots={savedSlots} selectedSlot={selectedSlot} busy={authLoading || loadSave.isFetching} onSelectSlot={setSelectedSlot} onBegin={() => void beginJourney()} onSignIn={startLogin} onInstall={() => void requestInstall()} onSettings={() => { setSettingsReturnTo("title"); setScreen("settings"); }} onDeleteSlot={(slot) => void deleteSlot(slot)} /> : null}
       {screen === "play" && hud.paused ? <PauseMenu signedIn={isAuthenticated} online={online} saving={upsertSave.isPending} onResume={() => scene?.setPaused(false)} onSave={() => void saveJourney()} onSettings={() => { setSettingsReturnTo("play"); setScreen("settings"); }} onTitle={returnToTitle} /> : null}
       {screen === "settings" ? <SettingsMenu uiScale={uiScale} onUiScaleChange={updateUiScale} onClose={() => setScreen(settingsReturnTo)} /> : null}
+      {screen === "play" ? <GameMasterRibbon text={gmText} /> : null}
+      <NarrativeSheet open={screen === "play" && guideOpen} pending={guideNarration.isPending} text={guideText ?? guideFallback(hud.objective)} onClose={() => { setGuideOpen(false); scene?.setPaused(false); }} />
       {screen === "play" && !hud.paused ? <TouchControls strikeReady={hud.strikeReady} onMove={(direction) => scene?.setTouchMove(direction)} onAction={(action) => scene?.triggerAction(action)} /> : null}
     </main>
   );

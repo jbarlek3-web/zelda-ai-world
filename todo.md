@@ -79,6 +79,14 @@
 - [x] Add a combat-specific HUD objective that transitions back to the founding objective after the river wisp is settled
 - [x] Surface strike cooldown/readiness in the shared HUD for keyboard and gamepad players, not only the touch control
 
+## 10B. Guide and Game Master Narrative Slice
+- [x] Connect a mobile-safe guide interaction to the existing bounded narrative endpoint with deterministic fallback copy and loading/error states
+- [x] Add a contextual Game Master narration event for Tideglass attunement, gathering progress, river-wisp resolution, and safe return to camp
+- [x] Test narrative fallback and rate-limit behavior without exposing raw LLM failures in the mobile HUD
+- [x] Trigger Game Master narration for the player safe-return reset path and verify it appears in the mobile status ribbon
+- [x] Add a client-level integration test that a narrative mutation error or rate-limit response renders deterministic fallback copy without raw provider or tRPC error text
+- [x] Exercise a mocked `TOO_MANY_REQUESTS` narrative mutation through Home and assert both guide and Game Master fallback copy remain free of raw error text
+
 ## 11. Persistence and Screen Stack
 - [x] Add a versioned three-slot save contract, user-scoped `aurastria_saves` table, and database migration
 - [x] Implement protected save list, load, upsert, and delete procedures with user-ownership enforcement

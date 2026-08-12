@@ -64,6 +64,7 @@ interface GatherNode {
 
 interface RiverWispRuntime {
   readonly mesh: Mesh;
+  readonly halo: Mesh;
   readonly light: PointLight;
 }
 
@@ -152,21 +153,21 @@ function buildFoundingCamp(scene: Scene): void {
   const timber = createMaterial(scene, "camp-timber", "#70452C");
   const roof = createMaterial(scene, "camp-roof", "#A57942");
   const hearth = createMaterial(scene, "camp-hearth", "#F0AC4E", "#73390E");
-  const campRing = MeshBuilder.CreateCylinder("camp-ring", { height: 0.08, diameter: 3.1, tessellation: 12 }, scene);
+  const campRing = MeshBuilder.CreateCylinder("camp-ring", { height: 0.07, diameter: 2.1, tessellation: 12 }, scene);
   campRing.position = campOrigin.add(new Vector3(0, 0.04, 0));
   campRing.material = timber;
   [
-    { x: 0.84, z: -0.55, scale: 0.86 },
-    { x: -0.8, z: -0.44, scale: 0.78 },
-    { x: 0.05, z: 0.88, scale: 0.74 },
+    { x: 0.54, z: -0.34, scale: 0.58 },
+    { x: -0.52, z: -0.3, scale: 0.54 },
+    { x: 0.03, z: 0.54, scale: 0.5 },
   ].forEach(({ x, z, scale }, index) => {
     const shelter = MeshBuilder.CreateCylinder(`camp-shelter-${index}`, { height: 0.78 * scale, diameterTop: 0.02, diameterBottom: 1.08 * scale, tessellation: 5 }, scene);
     shelter.position = campOrigin.add(new Vector3(x, 0.42 * scale, z));
     shelter.rotation.y = Math.PI / 5 + index * 0.38;
     shelter.material = roof;
   });
-  const fire = MeshBuilder.CreateSphere("camp-hearth", { diameter: 0.44, segments: 6 }, scene);
-  fire.position = campOrigin.add(new Vector3(0, 0.28, 0));
+  const fire = MeshBuilder.CreateSphere("camp-hearth", { diameter: 0.3, segments: 6 }, scene);
+  fire.position = campOrigin.add(new Vector3(0, 0.2, 0));
   fire.material = hearth;
 }
 
@@ -288,11 +289,17 @@ function buildRiverWisp(scene: Scene): RiverWispRuntime {
   const mesh = MeshBuilder.CreateSphere("river-wisp", { diameter: 0.62, segments: 6 }, scene);
   mesh.position = position;
   mesh.material = material;
+  const haloMaterial = createMaterial(scene, "river-wisp-halo-material", "#B3FFF4", "#4BE0D1");
+  haloMaterial.disableLighting = true;
+  const halo = MeshBuilder.CreateTorus("river-wisp-halo", { diameter: 1.08, thickness: 0.1, tessellation: 12 }, scene);
+  halo.position = position.add(new Vector3(0, -0.28, 0));
+  halo.rotation.x = Math.PI / 2;
+  halo.material = haloMaterial;
   const light = new PointLight("river-wisp-light", position.clone(), scene);
   light.diffuse = Color3.FromHexString("#6EE9DA");
   light.intensity = 0.62;
   light.range = 3.2;
-  return { mesh, light };
+  return { mesh, halo, light };
 }
 
 function buildGatherNodes(scene: Scene): GatherNode[] {
@@ -575,6 +582,7 @@ export function createAurastriaScene(engine: Engine, canvas: HTMLCanvasElement):
     if (result.state.health < hud.wispHealth) {
       if (result.state.phase === "defeated") {
         riverWispRuntime.mesh.setEnabled(false);
+        riverWispRuntime.halo.setEnabled(false);
         riverWispRuntime.light.setEnabled(false);
         publishHud("The river is quiet. The Tideglass route is safe for the camp.");
         events.emit("status", "River wisp settled. The camp recognizes your steady hand.");
@@ -715,7 +723,14 @@ export function createAurastriaScene(engine: Engine, canvas: HTMLCanvasElement):
         const moveScale = Math.min(1, engine.getDeltaTime() / 1000 * 1.1 / wispDistance);
         riverWispRuntime.mesh.position.x += (player.position.x - riverWispRuntime.mesh.position.x) * moveScale;
         riverWispRuntime.mesh.position.z += (player.position.z - riverWispRuntime.mesh.position.z) * moveScale;
+        riverWispRuntime.halo.position.x = riverWispRuntime.mesh.position.x;
+        riverWispRuntime.halo.position.z = riverWispRuntime.mesh.position.z;
         riverWispRuntime.light.position.copyFrom(riverWispRuntime.mesh.position);
+      }
+      if (!reducedMotion) {
+        riverWispRuntime.halo.rotation.z += engine.getDeltaTime() * 0.0018;
+        const haloPulse = 0.92 + Math.sin(elapsedSeconds * 2.2) * 0.08;
+        riverWispRuntime.halo.scaling.setAll(haloPulse);
       }
       if (result.playerDamage > 0) {
         playerVitality = Math.max(0, playerVitality - result.playerDamage);
