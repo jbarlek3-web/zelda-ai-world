@@ -63,7 +63,7 @@
 ## 9. Great River Spine Playable-Loop Pass
 - [ ] Capture a live render-budget sample after a stable browser warm-up and record the 60 FPS / 16.67 ms target comparison
 - [ ] Add an immediate, readable objective-feedback loop: discover the Tideglass Beacon, receive a clear settlement need, and return to the founding camp for a deterministic reward state
-- [ ] Add performance-safe anticipation, arrival, and hold timing to the beacon interaction without overriding player camera control or violating reduced-motion preferences
+- [x] Add performance-safe anticipation, arrival, and hold timing to the beacon interaction without overriding player camera control or violating reduced-motion preferences
 
 ## 10. Survival-Crafting Input and HUD Slice
 - [x] Implement data-driven move, interact, gather, and pause actions with keyboard and gamepad mappings plus graceful device fallback

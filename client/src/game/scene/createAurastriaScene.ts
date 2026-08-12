@@ -17,6 +17,7 @@ import { EventBus } from "@/game/core/eventBus";
 import { generateGreatRiverSpine, type RiverSpineTileKind } from "@/game/world/greatRiverSpine";
 import { hashCoordinates } from "@/game/world/prng";
 import { deriveRiverArtDirection } from "@/game/render/riverArtDirection";
+import { beaconArrivalScale } from "@/game/render/beaconMotion";
 import { combinedMoveDirection, isGamepadActionPressed, isKeyboardAction } from "@/game/input/inputActions";
 import {
   attuneTideglass,
@@ -354,6 +355,10 @@ export function createAurastriaScene(engine: Engine, canvas: HTMLCanvasElement):
   dawnLight.diffuse = Color3.FromHexString("#FFD69A");
 
   const terrainRuntime = buildRiverSpineTerrain(scene);
+  const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+  if (reducedMotion) {
+    terrainRuntime.motes.forEach((mote) => mote.mesh.setEnabled(false));
+  }
   const beaconLight = new PointLight("tideglass-beacon-light", terrainRuntime.beaconPosition.add(new Vector3(0, 2.3, 0)), scene);
   beaconLight.diffuse = Color3.FromHexString("#54DDD8");
   beaconLight.intensity = 1.1;
@@ -373,6 +378,9 @@ export function createAurastriaScene(engine: Engine, canvas: HTMLCanvasElement):
   let wasInteractPressed = false;
   let wasGatherPressed = false;
   let wasPausePressed = false;
+  let beaconArrivalStartedAt: number | undefined;
+  let wasNearBeacon = false;
+  let lastActionHint = hud.actionHint;
 
   const publishHud = (actionHint: string) => {
     hud = {
@@ -382,6 +390,15 @@ export function createAurastriaScene(engine: Engine, canvas: HTMLCanvasElement):
       inventory: quest.inventory,
       paused: hud.paused,
     };
+    events.emit("hud", hud);
+  };
+
+  const publishActionHint = (actionHint: string) => {
+    if (actionHint === lastActionHint) {
+      return;
+    }
+    lastActionHint = actionHint;
+    hud = { ...hud, actionHint };
     events.emit("hud", hud);
   };
 
@@ -495,17 +512,30 @@ export function createAurastriaScene(engine: Engine, canvas: HTMLCanvasElement):
     }
     const elapsedSeconds = performance.now() / 1000;
     terrainRuntime.waterMaterials.forEach((waterMaterial) => {
-      const currentScale = 0.72 + (Math.sin(elapsedSeconds * 0.9 + waterMaterial.phase) + 1) * 0.14;
+      const currentScale = reducedMotion ? 1 : 0.72 + (Math.sin(elapsedSeconds * 0.9 + waterMaterial.phase) + 1) * 0.14;
       waterMaterial.material.emissiveColor = waterMaterial.baseEmissive.scale(currentScale);
     });
-    const beaconPulse = 1 + Math.sin(elapsedSeconds * 1.15) * 0.045;
+    const distanceToBeacon = Vector3.Distance(player.position, terrainRuntime.beaconPosition);
+    const isNearBeacon = distanceToBeacon <= 5.5;
+    if (!hud.paused && isNearBeacon && !wasNearBeacon && quest.step === "seek-beacon") {
+      beaconArrivalStartedAt = elapsedSeconds;
+      publishActionHint("Tideglass answers nearby. Press E / A to attune the beacon.");
+    }
+    if (!hud.paused && !isNearBeacon && wasNearBeacon && quest.step === "seek-beacon") {
+      publishActionHint("Follow the turquoise beacon to begin the founding task.");
+    }
+    wasNearBeacon = isNearBeacon;
+    const arrivalScale = beaconArrivalStartedAt === undefined ? 1 : beaconArrivalScale(elapsedSeconds - beaconArrivalStartedAt, reducedMotion);
+    const beaconPulse = reducedMotion ? arrivalScale : arrivalScale * (1 + Math.sin(elapsedSeconds * 1.15) * 0.045);
     terrainRuntime.beacon.scaling.setAll(beaconPulse);
-    beaconLight.intensity = 1.03 + Math.sin(elapsedSeconds * 1.15) * 0.16;
-    terrainRuntime.motes.forEach((mote) => {
-      mote.mesh.position.y = mote.basePosition.y + Math.sin(elapsedSeconds * 0.72 + mote.phase) * 0.3;
-      mote.mesh.position.x = mote.basePosition.x + Math.cos(elapsedSeconds * 0.46 + mote.phase) * 0.16;
-      mote.mesh.visibility = 0.36 + (Math.sin(elapsedSeconds * 1.2 + mote.phase) + 1) * 0.22;
-    });
+    beaconLight.intensity = reducedMotion ? 1.03 : 1.03 + Math.sin(elapsedSeconds * 1.15) * 0.16;
+    if (!reducedMotion) {
+      terrainRuntime.motes.forEach((mote) => {
+        mote.mesh.position.y = mote.basePosition.y + Math.sin(elapsedSeconds * 0.72 + mote.phase) * 0.3;
+        mote.mesh.position.x = mote.basePosition.x + Math.cos(elapsedSeconds * 0.46 + mote.phase) * 0.16;
+        mote.mesh.visibility = 0.36 + (Math.sin(elapsedSeconds * 1.2 + mote.phase) + 1) * 0.22;
+      });
+    }
 
     const gamepad = navigator.getGamepads?.()[0] ?? undefined;
     const interactPressed = isGamepadActionPressed("interact", gamepad);
