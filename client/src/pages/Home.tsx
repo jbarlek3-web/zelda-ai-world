@@ -41,6 +41,7 @@ export default function Home() {
   const [settingsReturnTo, setSettingsReturnTo] = useState<"title" | "play">("title");
   const [online, setOnline] = useState(() => navigator.onLine);
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [installHint, setInstallHint] = useState<string | null>(null);
   const { isAuthenticated, loading: authLoading } = useAuth();
   const utils = trpc.useUtils();
   const savesQuery = trpc.saves.list.useQuery(undefined, { enabled: isAuthenticated });
@@ -67,6 +68,12 @@ export default function Home() {
     window.addEventListener("online", updateConnectivity);
     window.addEventListener("offline", updateConnectivity);
     window.addEventListener("beforeinstallprompt", captureInstallPrompt);
+    const isAppleMobile = /iPad|iPhone|iPod/.test(window.navigator.userAgent);
+    if (isAppleMobile) {
+      setInstallHint("To install on iPhone or iPad, open Share and choose Add to Home Screen.");
+    } else if (!window.matchMedia("(display-mode: standalone)").matches) {
+      setInstallHint("When your browser offers installation, choose Install App from its menu to keep the river chart at hand.");
+    }
     return () => {
       window.removeEventListener("online", updateConnectivity);
       window.removeEventListener("offline", updateConnectivity);
@@ -165,7 +172,7 @@ export default function Home() {
           </section>
         </div>
       </div>
-      {screen === "title" ? <TitleMenu signedIn={isAuthenticated} online={online} canInstall={installPrompt !== null} slots={savedSlots} selectedSlot={selectedSlot} busy={authLoading || loadSave.isFetching} onSelectSlot={setSelectedSlot} onBegin={() => void beginJourney()} onSignIn={startLogin} onInstall={() => void requestInstall()} onSettings={() => { setSettingsReturnTo("title"); setScreen("settings"); }} onDeleteSlot={(slot) => void deleteSlot(slot)} /> : null}
+      {screen === "title" ? <TitleMenu signedIn={isAuthenticated} online={online} canInstall={installPrompt !== null} installHint={installPrompt ? null : installHint} slots={savedSlots} selectedSlot={selectedSlot} busy={authLoading || loadSave.isFetching} onSelectSlot={setSelectedSlot} onBegin={() => void beginJourney()} onSignIn={startLogin} onInstall={() => void requestInstall()} onSettings={() => { setSettingsReturnTo("title"); setScreen("settings"); }} onDeleteSlot={(slot) => void deleteSlot(slot)} /> : null}
       {screen === "play" && hud.paused ? <PauseMenu signedIn={isAuthenticated} online={online} saving={upsertSave.isPending} onResume={() => scene?.setPaused(false)} onSave={() => void saveJourney()} onSettings={() => { setSettingsReturnTo("play"); setScreen("settings"); }} onTitle={returnToTitle} /> : null}
       {screen === "settings" ? <SettingsMenu uiScale={uiScale} onUiScaleChange={updateUiScale} onClose={() => setScreen(settingsReturnTo)} /> : null}
       {screen === "play" && !hud.paused ? <TouchControls onMove={(direction) => scene?.setTouchMove(direction)} onAction={(action) => scene?.triggerAction(action)} /> : null}

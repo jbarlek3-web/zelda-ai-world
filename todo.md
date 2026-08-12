@@ -81,7 +81,7 @@
 ## 12. Mobile-First PWA and Visual Replacement
 - [x] Define a mobile-first visual target that replaces the prototype grid with an original illustrated terrain style, limited palette, readable silhouettes, and coherent landmark language
 - [x] Add an installable PWA manifest, maskable icons, service-worker registration, and an offline app-shell fallback
-- [ ] Add a user-visible install action when the browser exposes it and an explicit archive-connectivity state for offline journeys
+- [x] Add a user-visible install action when the browser exposes it and an explicit archive-connectivity state for offline journeys
 - [x] Implement touch-first movement, interact, gather, and pause controls with safe-area placement and accessible labels
 - [x] Redesign the phone HUD around a compact top status strip, bottom action cluster, and a minimap or navigation compass rather than desktop-card overlays
 - [ ] Replace the current terrain tiles, primitive camp meshes, and player cylinder with a cohesive low-poly or painted-sprite asset system that remains performant on mobile GPUs

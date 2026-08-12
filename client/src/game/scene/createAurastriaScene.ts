@@ -3,6 +3,7 @@ import { Engine } from "@babylonjs/core/Engines/engine";
 import { Color3, Color4 } from "@babylonjs/core/Maths/math.color";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
+import { Material } from "@babylonjs/core/Materials/material";
 import { Texture } from "@babylonjs/core/Materials/Textures/texture";
 import { DirectionalLight } from "@babylonjs/core/Lights/directionalLight";
 import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder";
@@ -39,9 +40,9 @@ const MAP_WIDTH = 32;
 const MAP_HEIGHT = 24;
 const PLAYER_SPEED = 7;
 const GREAT_RIVER_MOBILE_PLATE_URL = "/manus-storage/aurastria-great-river-mobile-plate_e54226c6.png";
-const TIDEWALKER_TOKEN_URL = "/manus-storage/aurastria-tidewalker-topdown-token_7e07a69d.png";
-const FOUNDING_CAMP_MARKER_URL = "/manus-storage/aurastria-founding-camp-topdown-marker_7b81fbfb.png";
-const TIDEGLASS_BEACON_SPRITE_URL = "/manus-storage/aurastria-tideglass-topdown-beacon_7ba6abb8.png";
+const TIDEWALKER_TOKEN_URL = "/manus-storage/aurastria-expedition-token_547c361d.png";
+const FOUNDING_CAMP_MARKER_URL = "/manus-storage/aurastria-founding-camp-token_8cc3f7db.png";
+const TIDEGLASS_BEACON_SPRITE_URL = "/manus-storage/aurastria-tideglass-beacon-token_c944b6ed.png";
 const RIVER_REED_TOKEN_URL = "/manus-storage/aurastria-river-reed-topdown-token_e3a0da75.png";
 const SMOOTH_STONE_TOKEN_URL = "/manus-storage/aurastria-smooth-stone-topdown-token_4da7b272.png";
 
@@ -126,6 +127,8 @@ function buildIllustratedGroundMarker(scene: Scene, name: string, source: string
   material.diffuseTexture = texture;
   material.opacityTexture = texture;
   material.useAlphaFromDiffuseTexture = true;
+  material.transparencyMode = Material.MATERIAL_ALPHATEST;
+  material.alphaCutOff = 0.02;
   material.specularColor = Color3.Black();
   material.backFaceCulling = false;
   material.disableLighting = true;
@@ -271,8 +274,10 @@ function buildRiverMotes(scene: Scene, anchor: Vector3, seed: number): readonly 
 }
 
 function buildGatherNodes(scene: Scene): GatherNode[] {
-  const reedMaterial = createMaterial(scene, "quest-river-reed", "#A5C46B", "#315C42");
-  const stoneMaterial = createMaterial(scene, "quest-smooth-stone", "#5B716A");
+  const reedMaterial = createMaterial(scene, "quest-river-reed", "#B8D978", "#527843");
+  reedMaterial.disableLighting = true;
+  const stoneMaterial = createMaterial(scene, "quest-smooth-stone", "#8BA9A0", "#314A4B");
+  stoneMaterial.disableLighting = true;
   const definitions: readonly { readonly kind: GatherableKind; readonly tile: Readonly<{ x: number; y: number }> }[] = [
     { kind: "river-reed", tile: { x: 14, y: 13 } },
     { kind: "river-reed", tile: { x: 14, y: 15 } },
@@ -284,17 +289,17 @@ function buildGatherNodes(scene: Scene): GatherNode[] {
   return definitions.map((definition, index) => {
     const position = toWorldPosition(definition.tile.x, definition.tile.y);
     if (definition.kind === "river-reed") {
-      const mesh = MeshBuilder.CreateCylinder(`quest-reed-${index}`, { height: 0.82, diameter: 0.15, tessellation: 5 }, scene);
-      mesh.position = position.add(new Vector3(0, 0.38, 0));
+      const mesh = MeshBuilder.CreateCylinder(`quest-reed-${index}`, { height: 0.98, diameterTop: 0.03, diameterBottom: 0.34, tessellation: 5 }, scene);
+      mesh.position = position.add(new Vector3(0, 0.48, 0));
       mesh.material = reedMaterial;
       const token = buildIllustratedGroundMarker(scene, `quest-reed-token-${index}`, RIVER_REED_TOKEN_URL, position.add(new Vector3(0, 0.045, 0)), 1.35);
       token.setEnabled(false);
       return { kind: definition.kind, mesh, position, collected: false };
     }
 
-    const mesh = MeshBuilder.CreateSphere(`quest-stone-${index}`, { diameter: 0.58, segments: 5 }, scene);
-    mesh.scaling.y = 0.56;
-    mesh.position = position.add(new Vector3(0, 0.16, 0));
+    const mesh = MeshBuilder.CreateSphere(`quest-stone-${index}`, { diameter: 0.7, segments: 5 }, scene);
+    mesh.scaling.y = 0.48;
+    mesh.position = position.add(new Vector3(0, 0.18, 0));
     mesh.material = stoneMaterial;
     const token = buildIllustratedGroundMarker(scene, `quest-stone-token-${index}`, SMOOTH_STONE_TOKEN_URL, position.add(new Vector3(0, 0.045, 0)), 1.15);
     token.setEnabled(false);

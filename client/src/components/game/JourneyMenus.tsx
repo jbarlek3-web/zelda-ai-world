@@ -28,6 +28,7 @@ interface TitleMenuProps {
   readonly signedIn: boolean;
   readonly online: boolean;
   readonly canInstall: boolean;
+  readonly installHint: string | null;
   readonly slots: readonly SaveSlotView[];
   readonly selectedSlot: number;
   readonly busy: boolean;
@@ -43,12 +44,13 @@ function formatSavedAt(value: Date): string {
   return new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(value);
 }
 
-export function TitleMenu({ signedIn, online, canInstall, slots, selectedSlot, busy, onSelectSlot, onBegin, onSignIn, onInstall, onSettings, onDeleteSlot }: TitleMenuProps) {
+export function TitleMenu({ signedIn, online, canInstall, installHint, slots, selectedSlot, busy, onSelectSlot, onBegin, onSignIn, onInstall, onSettings, onDeleteSlot }: TitleMenuProps) {
   const slotByNumber = new Map(slots.map((slot) => [slot.slot, slot]));
   return (
     <MenuFrame eyebrow="Aurastria · Founding Season" title="Spirits of the First Dawn">
       <p className="mt-3 max-w-lg text-sm leading-6 text-[#f0dfb6]/85">Begin at the Great River Spine, listen for the Tideglass, and return what the camp needs to steward the coming season.</p>
       {!online ? <div className="mt-5 rounded-sm border border-[#d9b867]/35 bg-[#061d17] px-4 py-3 text-sm leading-6 text-[#c8d7b6]">Offline journey mode. Your archive cannot be reached until this device reconnects.</div> : null}
+      {installHint ? <div className="mt-4 rounded-sm border border-[#3dd4cc]/35 bg-[#061d17] px-4 py-3 text-sm leading-6 text-[#bceee5]">{installHint}</div> : null}
       {signedIn ? (
         <div className="mt-6 grid gap-2" aria-label="Journey archive slots">
           {[1, 2, 3].map((slot) => {
