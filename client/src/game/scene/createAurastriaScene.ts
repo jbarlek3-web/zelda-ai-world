@@ -16,7 +16,7 @@ import { PointLight } from "@babylonjs/core/Lights/pointLight";
 import { Scene } from "@babylonjs/core/scene";
 import { HemisphericLight } from "@babylonjs/core/Lights/hemisphericLight";
 import { EventBus } from "@/game/core/eventBus";
-import { generateGreatRiverSpine } from "@/game/world/greatRiverSpine";
+import { resolveFoundingLoopLayout } from "@/game/world/foundingLoopLayout";
 import { hashCoordinates } from "@/game/world/prng";
 import { deriveRiverArtDirection } from "@/game/render/riverArtDirection";
 import { beaconArrivalScale } from "@/game/render/beaconMotion";
@@ -28,6 +28,7 @@ import { createSceneSaveState, restoreFoundingQuest } from "@/game/features/save
 import { recoverFromRiverWisp } from "@/game/features/survival/foundingLoopRecovery";
 import { applySettleWispSafeReturn } from "@/game/scene/foundingLoopSceneRecovery";
 import type { SaveStateInput } from "@shared/game/schemas";
+import { DEFAULT_WORLD_SEED } from "@shared/game/constants";
 import {
   attuneTideglass,
   collectFoundingMaterial,
@@ -44,6 +45,12 @@ const TILE_WORLD_SIZE = 1.55;
 const MAP_WIDTH = 32;
 const MAP_HEIGHT = 24;
 const PLAYER_SPEED = 7;
+/** Canonical founding-loop spawn tile; also the reachability origin for objective validation. */
+const PLAYER_SPAWN_TILE = { x: 10, y: 14 } as const;
+/** Founding camp tile; the founding loop must be able to walk spawn → Tideglass → camp. */
+const FOUNDING_CAMP_TILE = { x: 7, y: 12 } as const;
+const REQUIRED_REED_NODES = 3;
+const REQUIRED_STONE_NODES = 2;
 const GREAT_RIVER_MOBILE_PLATE_URL = "/manus-storage/aurastria-great-river-mobile-plate_e54226c6.png";
 const TIDEWALKER_TOKEN_URL = "/manus-storage/aurastria-expedition-token_547c361d.png";
 const FOUNDING_CAMP_MARKER_URL = "/manus-storage/aurastria-founding-camp-token_8cc3f7db.png";
@@ -57,6 +64,8 @@ interface RiverTerrainRuntime {
   readonly beacon: Mesh;
   readonly beaconPosition: Vector3;
   readonly motes: readonly { readonly mesh: Mesh; readonly basePosition: Vector3; readonly phase: number }[];
+  readonly gatherPlacements: readonly { readonly kind: GatherableKind; readonly tile: Readonly<{ x: number; y: number }> }[];
+  readonly campPosition: Vector3;
 }
 
 interface GatherNode {
@@ -150,8 +159,8 @@ function buildIllustratedGroundMarker(scene: Scene, name: string, source: string
   return marker;
 }
 
-function buildFoundingCamp(scene: Scene): void {
-  const campOrigin = toWorldPosition(7, 12);
+function buildFoundingCamp(scene: Scene, campTile: Readonly<{ x: number; y: number }>): void {
+  const campOrigin = toWorldPosition(campTile.x, campTile.y);
   const marker = buildIllustratedGroundMarker(scene, "founding-camp-marker", FOUNDING_CAMP_MARKER_URL, campOrigin.add(new Vector3(0, 0.04, 0)), 4.8);
   marker.setEnabled(false);
 
@@ -307,20 +316,12 @@ function buildRiverWisp(scene: Scene): RiverWispRuntime {
   return { mesh, halo, light };
 }
 
-function buildGatherNodes(scene: Scene): GatherNode[] {
+function buildGatherNodes(scene: Scene, placements: readonly { readonly kind: GatherableKind; readonly tile: Readonly<{ x: number; y: number }> }[]): GatherNode[] {
   const reedMaterial = createMaterial(scene, "quest-river-reed", "#B8D978", "#527843");
   reedMaterial.disableLighting = true;
   const stoneMaterial = createMaterial(scene, "quest-smooth-stone", "#8BA9A0", "#314A4B");
   stoneMaterial.disableLighting = true;
-  const definitions: readonly { readonly kind: GatherableKind; readonly tile: Readonly<{ x: number; y: number }> }[] = [
-    { kind: "river-reed", tile: { x: 14, y: 13 } },
-    { kind: "river-reed", tile: { x: 14, y: 15 } },
-    { kind: "river-reed", tile: { x: 16, y: 14 } },
-    { kind: "smooth-stone", tile: { x: 11, y: 13 } },
-    { kind: "smooth-stone", tile: { x: 12, y: 16 } },
-  ];
-
-  return definitions.map((definition, index) => {
+  return placements.map((definition, index) => {
     const position = toWorldPosition(definition.tile.x, definition.tile.y);
     if (definition.kind === "river-reed") {
       const mesh = MeshBuilder.CreateCylinder(`quest-reed-${index}`, { height: 0.98, diameterTop: 0.03, diameterBottom: 0.34, tessellation: 5 }, scene);
@@ -341,20 +342,43 @@ function buildGatherNodes(scene: Scene): GatherNode[] {
   });
 }
 
-function buildRiverSpineTerrain(scene: Scene): RiverTerrainRuntime {
-  const map = generateGreatRiverSpine({ width: MAP_WIDTH, height: MAP_HEIGHT });
-  const visualPlan = deriveRiverArtDirection(map);
+function buildRiverSpineTerrain(scene: Scene, seed: number): RiverTerrainRuntime {
+  // The layout module validates reachability and throws on an unplayable world;
+  // the tiles it returns are the tiles rendered below, with no substitution here.
+  const layout = resolveFoundingLoopLayout({
+    seed,
+    width: MAP_WIDTH,
+    height: MAP_HEIGHT,
+    spawnTile: PLAYER_SPAWN_TILE,
+    preferredCampTile: FOUNDING_CAMP_TILE,
+    reedCount: REQUIRED_REED_NODES,
+    stoneCount: REQUIRED_STONE_NODES,
+  });
+  const map = layout.map;
   buildPaintedTerrainPlate(scene);
-  buildRiverArtDetails(scene, visualPlan.details);
-  buildFoundingCamp(scene);
-  const beaconPosition = toWorldPosition(visualPlan.landmarkTile.x, visualPlan.landmarkTile.y);
+  buildRiverArtDetails(scene, deriveRiverArtDirection(map).details);
+  buildFoundingCamp(scene, layout.campTile);
+  const campPosition = toWorldPosition(layout.campTile.x, layout.campTile.y);
+  const beaconPosition = toWorldPosition(layout.beaconTile.x, layout.beaconTile.y);
   const beacon = buildTideglassBeacon(scene, beaconPosition);
-  buildTideglassRoute(scene, toWorldPosition(10, 14), beaconPosition);
+  buildTideglassRoute(scene, toWorldPosition(PLAYER_SPAWN_TILE.x, PLAYER_SPAWN_TILE.y), beaconPosition);
   const motes = buildRiverMotes(scene, beaconPosition, map.seed);
-  return { worldSeed: map.seed, waterMaterials: [], beacon, beaconPosition, motes };
+  return {
+    worldSeed: map.seed,
+    waterMaterials: [],
+    beacon,
+    beaconPosition,
+    motes,
+    gatherPlacements: layout.gatherPlacements,
+    campPosition,
+  };
 }
 
-export function createAurastriaScene(engine: Engine, canvas: HTMLCanvasElement): AurastriaSceneHandle {
+export function createAurastriaScene(
+  engine: Engine,
+  canvas: HTMLCanvasElement,
+  worldSeed: number = DEFAULT_WORLD_SEED,
+): AurastriaSceneHandle {
   const scene = new Scene(engine);
   scene.clearColor = new Color4(0.025, 0.085, 0.08, 1);
   scene.fogMode = Scene.FOGMODE_EXP2;
@@ -412,7 +436,7 @@ export function createAurastriaScene(engine: Engine, canvas: HTMLCanvasElement):
   dawnLight.intensity = 0.88;
   dawnLight.diffuse = Color3.FromHexString("#FFD69A");
 
-  const terrainRuntime = buildRiverSpineTerrain(scene);
+  const terrainRuntime = buildRiverSpineTerrain(scene, worldSeed);
   const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
   if (reducedMotion) {
     terrainRuntime.motes.forEach((mote) => mote.mesh.setEnabled(false));
@@ -422,13 +446,13 @@ export function createAurastriaScene(engine: Engine, canvas: HTMLCanvasElement):
   beaconLight.intensity = 1.1;
   beaconLight.range = 6.2;
 
-  const hearthLight = new PointLight("camp-hearth-light", toWorldPosition(7, 12).add(new Vector3(0.25, 0.72, 1.95)), scene);
+  const hearthLight = new PointLight("camp-hearth-light", terrainRuntime.campPosition.add(new Vector3(0.25, 0.72, 1.95)), scene);
   hearthLight.diffuse = Color3.FromHexString("#FFB64D");
   hearthLight.intensity = 0.78;
   hearthLight.range = 5;
-  const gatherNodes = buildGatherNodes(scene);
+  const gatherNodes = buildGatherNodes(scene, terrainRuntime.gatherPlacements);
   const riverWispRuntime = buildRiverWisp(scene);
-  const campPosition = toWorldPosition(7, 12);
+  const campPosition = terrainRuntime.campPosition;
   const pressed = new Set<string>();
   const movementKeys = new Set<string>(["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "KeyW", "KeyA", "KeyS", "KeyD"]);
   let quest = createFoundingQuest();

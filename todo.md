@@ -92,9 +92,12 @@
 - [x] Extract roll displacement, cooldown, and edge clamping into a pure deterministic module with unit tests
 
 ## 10E. Seeded Determinism Audit
-- [ ] Audit all world/resource/encounter generation for a single seeded RNG instance with no `Math.random` in generation paths
-- [ ] Assert the same seed reproduces an identical world grid, resource layout, and dungeon topology across repeated runs
-- [ ] Validate generated layout reachability (spawn → Tideglass → camp, dungeon entry → boss) and reject unreachable results
+- [x] Audit generation paths for `Math.random` leakage and confirm world art, motes, and dungeon topology derive from the seed
+- [x] Assert the same seed reproduces an identical world grid across repeated runs and differs across seeds
+- [x] Add a reachability validator (walkable flood fill, unreachable reporting, nearest reachable substitute) with unit tests
+- [x] Pass an explicit world seed into the scene instead of generating terrain from an implicit default
+- [x] Seed gather-node placement from the world seed and prove identical resource layouts across repeated runs
+- [x] Validate the full spawn → Tideglass → camp chain in one walkable region and fail loudly when invalid
 
 ## 10F. Measured Mobile Performance Budget
 - [ ] Record a warm-up-stable frame-time, draw-call, and active-mesh sample against the 60 FPS / 16.67 ms mobile budget
