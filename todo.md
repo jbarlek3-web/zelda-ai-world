@@ -86,6 +86,14 @@
 - [x] Add a combat-specific HUD objective that transitions back to the founding objective after the river wisp is settled
 - [x] Surface strike cooldown/readiness in the shared HUD for keyboard and gamepad players, not only the touch control
 
+## 10C. First Dungeon Domain Slice
+- [x] Define a deterministic room graph with entry, key room, locked-door gate, treasure room, boss room, and guaranteed solvability validation
+- [x] Implement dungeon run state for keys, locked doors, chests, and clear/reset behavior with no-soft-lock guards
+- [x] Add the required Skulltula, Moblin, and dungeon boss domain state machines with deterministic damage, recovery, and defeat transitions
+- [x] Cover dungeon topology, key-door progress, and all required enemy transitions with unit tests before scene rendering integration
+- [x] Add an explicit safe dungeon-run reset pathway and test that it clears partial progress without creating a soft-lock
+- [x] Assert every required dungeon enemy passes idle → approach → windup → strike → recover → defeated with deterministic damage timing
+
 ## 10B. Guide and Game Master Narrative Slice
 - [x] Connect a mobile-safe guide interaction to the existing bounded narrative endpoint with deterministic fallback copy and loading/error states
 - [x] Add a contextual Game Master narration event for Tideglass attunement, gathering progress, river-wisp resolution, and safe return to camp
