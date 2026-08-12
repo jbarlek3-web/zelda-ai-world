@@ -4,6 +4,7 @@ import {
   collectFoundingMaterial,
   createFoundingQuest,
   deliverFoundingMaterials,
+  settleRiverWisp,
   type FoundingQuestState,
 } from "../survival/foundingQuest";
 
@@ -15,7 +16,10 @@ export interface SceneSaveSource {
 
 function completedQuestIds(quest: FoundingQuestState): string[] {
   if (quest.step === "complete") {
-    return ["tideglass-attuned", "founding-need"];
+    return ["tideglass-attuned", "river-wisp-settled", "founding-need"];
+  }
+  if (quest.step === "return-to-camp") {
+    return ["tideglass-attuned", "river-wisp-settled"];
   }
   return quest.step === "seek-beacon" ? [] : ["tideglass-attuned"];
 }
@@ -55,6 +59,9 @@ export function restoreFoundingQuest(state: SaveStateInput): FoundingQuestState 
   }
   for (let index = 0; index < state.resources.stone; index += 1) {
     quest = collectFoundingMaterial(quest, "smooth-stone");
+  }
+  if (state.completedQuestIds.includes("river-wisp-settled")) {
+    quest = settleRiverWisp(quest);
   }
   return state.completedQuestIds.includes("founding-need") ? deliverFoundingMaterials(quest) : quest;
 }

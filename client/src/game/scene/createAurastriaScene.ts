@@ -24,6 +24,8 @@ import { beaconNavigation, type BeaconNavigation } from "@/game/navigation/beaco
 import { combinedMoveDirection, isGamepadActionPressed, isKeyboardAction } from "@/game/input/inputActions";
 import { createRiverWisp, stepRiverWisp, type RiverWispState } from "@/game/features/combat/riverWispCombat";
 import { createSceneSaveState, restoreFoundingQuest } from "@/game/features/saves/sceneSaveState";
+import { recoverFromRiverWisp } from "@/game/features/survival/foundingLoopRecovery";
+import { applySettleWispSafeReturn } from "@/game/scene/foundingLoopSceneRecovery";
 import type { SaveStateInput } from "@shared/game/schemas";
 import {
   attuneTideglass,
@@ -32,6 +34,7 @@ import {
   deliverFoundingMaterials,
   foundingObjective,
   foundingProgress,
+  settleRiverWisp,
   type FoundingInventory,
   type GatherableKind,
 } from "@/game/features/survival/foundingQuest";
@@ -441,6 +444,14 @@ export function createAurastriaScene(engine: Engine, canvas: HTMLCanvasElement):
   let playerVitality = 3;
   let strikeCooldownEndsAt = 0;
 
+  const syncWispEncounter = () => {
+    const active = quest.step === "settle-wisp" && riverWisp.phase !== "defeated";
+    riverWispRuntime.mesh.setEnabled(active);
+    riverWispRuntime.halo.setEnabled(active);
+    riverWispRuntime.light.setEnabled(active);
+  };
+  syncWispEncounter();
+
   const syncPlayerMarker = () => {
     playerToken.position.set(player.position.x, 0.055, player.position.z);
     playerToken.rotation.y = player.rotation.y;
@@ -455,9 +466,9 @@ export function createAurastriaScene(engine: Engine, canvas: HTMLCanvasElement):
     { x: terrainRuntime.beaconPosition.x, z: terrainRuntime.beaconPosition.z },
   );
   const isStrikeReady = () => performance.now() >= strikeCooldownEndsAt;
-  const currentObjective = () => riverWisp.phase === "defeated"
-    ? foundingObjective(quest)
-    : "Settle the river wisp";
+  const currentObjective = () => quest.step === "settle-wisp" && riverWisp.phase !== "defeated"
+    ? "Settle the river wisp before returning to camp"
+    : foundingObjective(quest);
   hud = { ...hud, objective: currentObjective(), navigation: currentNavigation() };
 
   const publishHud = (actionHint: string) => {
@@ -506,6 +517,10 @@ export function createAurastriaScene(engine: Engine, canvas: HTMLCanvasElement):
     syncPlayerMarker();
     camera.target.copyFrom(player.position);
     quest = restoreFoundingQuest(state);
+    if (quest.step === "return-to-camp" || quest.step === "complete") {
+      riverWisp = { phase: "defeated", health: 0, phaseElapsedMs: 0 };
+    }
+    syncWispEncounter();
     publishHud("Journey restored. Follow the river’s living light.");
     events.emit("status", "Journey restored from the river archive.");
   };
@@ -530,7 +545,9 @@ export function createAurastriaScene(engine: Engine, canvas: HTMLCanvasElement):
     if (distanceToCamp <= 6) {
       events.emit("status", quest.step === "complete"
         ? "The camp stewards review the granary plan. Explore freely; more needs will emerge with the season."
-        : "The river camp needs a Tideglass reading before it can name the next shared task.");
+        : quest.step === "settle-wisp"
+          ? "The camp asks you to settle the river wisp before carrying these materials home."
+          : "The river camp needs a Tideglass reading before it can name the next shared task.");
       return;
     }
 
@@ -560,13 +577,17 @@ export function createAurastriaScene(engine: Engine, canvas: HTMLCanvasElement):
     nearest.node.mesh.setEnabled(false);
     quest = collectFoundingMaterial(quest, nearest.node.kind);
     const label = nearest.node.kind === "river-reed" ? "river reed" : "smooth stone";
-    publishHud(quest.step === "return-to-camp"
-      ? "Materials complete. Return to Founding Camp and press E / A to deliver them."
+    publishHud(quest.step === "settle-wisp"
+      ? "Materials complete. Settle the river wisp, then return to Founding Camp."
       : "Continue gathering beside the river; every material is recorded for the shared camp.");
     events.emit("status", `Collected ${label}. ${foundingProgress(quest)}.`);
   };
 
   const attemptStrike = () => {
+    if (quest.step !== "settle-wisp") {
+      events.emit("status", "The river staff waits for the Tideglass and camp materials to name this current’s purpose.");
+      return;
+    }
     if (riverWisp.phase === "defeated") {
       events.emit("status", "The river wisp has dissolved into harmless Tideglass light.");
       return;
@@ -581,11 +602,10 @@ export function createAurastriaScene(engine: Engine, canvas: HTMLCanvasElement):
     riverWisp = result.state;
     if (result.state.health < hud.wispHealth) {
       if (result.state.phase === "defeated") {
-        riverWispRuntime.mesh.setEnabled(false);
-        riverWispRuntime.halo.setEnabled(false);
-        riverWispRuntime.light.setEnabled(false);
-        publishHud("The river is quiet. The Tideglass route is safe for the camp.");
-        events.emit("status", "River wisp settled. The camp recognizes your steady hand.");
+        quest = settleRiverWisp(quest);
+        syncWispEncounter();
+        publishHud("The river is quiet. Return the gathered materials to Founding Camp.");
+        events.emit("status", "River wisp settled. The camp recognizes your steady hand and waits for your return.");
       } else {
         publishHud(`River wisp steadied. ${result.state.health} breaths of turbulence remain.`);
         events.emit("status", "Your river-staff meets the wisp’s current.");
@@ -711,7 +731,7 @@ export function createAurastriaScene(engine: Engine, canvas: HTMLCanvasElement):
       return;
     }
 
-    if (riverWisp.phase !== "defeated") {
+    if (quest.step === "settle-wisp" && riverWisp.phase !== "defeated") {
       const wispDistance = Vector3.Distance(player.position, riverWispRuntime.mesh.position);
       const result = stepRiverWisp(riverWisp, {
         distanceToPlayer: wispDistance,
@@ -735,11 +755,22 @@ export function createAurastriaScene(engine: Engine, canvas: HTMLCanvasElement):
       if (result.playerDamage > 0) {
         playerVitality = Math.max(0, playerVitality - result.playerDamage);
         if (playerVitality === 0) {
-          playerVitality = 3;
-          player.position.copyFrom(campPosition);
-          syncPlayerMarker();
-          publishHud("The camp steadies you. Return to the river when ready.");
-          events.emit("status", "The river carries you safely back to camp. No journey progress was lost.");
+          const recovery = recoverFromRiverWisp(quest);
+          if (recovery.returnToCamp) {
+            const sceneRecovery = applySettleWispSafeReturn({
+              quest: recovery.quest,
+              vitality: recovery.vitality,
+              playerPosition: { x: player.position.x, y: player.position.y, z: player.position.z },
+            }, { x: campPosition.x, y: campPosition.y, z: campPosition.z });
+            quest = sceneRecovery.quest;
+            playerVitality = sceneRecovery.vitality;
+            player.position.set(sceneRecovery.playerPosition.x, sceneRecovery.playerPosition.y, sceneRecovery.playerPosition.z);
+            syncPlayerMarker();
+            publishHud("The camp steadies you. Return to the river when ready.");
+            events.emit("status", "The river carries you safely back to camp. No journey progress was lost.");
+          } else {
+            playerVitality = recovery.vitality;
+          }
         } else {
           publishHud("The river wisp’s current stings. Keep space, then strike when ready.");
         }

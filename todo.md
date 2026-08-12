@@ -65,6 +65,13 @@
 - [ ] Add an immediate, readable objective-feedback loop: discover the Tideglass Beacon, receive a clear settlement need, and return to the founding camp for a deterministic reward state
 - [x] Add performance-safe anticipation, arrival, and hold timing to the beacon interaction without overriding player camera control or violating reduced-motion preferences
 
+## 9A. Founding-Loop Completion
+- [x] Define an explicit Tideglass → gathering → river-wisp → return-to-camp transition graph with an idempotent reward and a safe recovery path
+- [x] Gate the founding reward on both collection requirements and river-wisp resolution, then communicate the completed season state in the mobile HUD
+- [x] Add focused transition tests for the completed reward, repeat interaction, and defeat-recovery branches
+- [x] Exercise the integrated `settle-wisp` safe-return branch, retaining gathered materials and allowing the player to continue the gated founding loop afterward (verified via pure-function adapter boundary tests)
+- [ ] Visually verify the live settle-wisp safe-return path in the browser: defeat triggers camp teleport, HUD retains materials, and the founding loop can still complete
+
 ## 10. Survival-Crafting Input and HUD Slice
 - [x] Implement data-driven move, interact, gather, and pause actions with keyboard and gamepad mappings plus graceful device fallback
 - [x] Add deterministic reed and stone resource nodes, collection validation, and a small starting-inventory state for the first crafting objective

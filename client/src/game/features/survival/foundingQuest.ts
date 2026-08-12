@@ -1,5 +1,5 @@
 export type GatherableKind = "river-reed" | "smooth-stone";
-export type FoundingQuestStep = "seek-beacon" | "gather-materials" | "return-to-camp" | "complete";
+export type FoundingQuestStep = "seek-beacon" | "gather-materials" | "settle-wisp" | "return-to-camp" | "complete";
 export type FoundingInventory = Readonly<Record<GatherableKind, number>>;
 
 export interface FoundingQuestState {
@@ -35,7 +35,11 @@ export function collectFoundingMaterial(state: FoundingQuestState, kind: Gathera
   const next = { ...state, inventory: nextInventory };
   const readyToReturn = next.inventory["river-reed"] >= FOUNDING_QUEST_TARGETS.riverReeds
     && next.inventory["smooth-stone"] >= FOUNDING_QUEST_TARGETS.smoothStones;
-  return readyToReturn ? { ...next, step: "return-to-camp" } : next;
+  return readyToReturn ? { ...next, step: "settle-wisp" } : next;
+}
+
+export function settleRiverWisp(state: FoundingQuestState): FoundingQuestState {
+  return state.step === "settle-wisp" ? { ...state, step: "return-to-camp" } : state;
 }
 
 export function deliverFoundingMaterials(state: FoundingQuestState): FoundingQuestState {
@@ -48,6 +52,8 @@ export function foundingObjective(state: FoundingQuestState): string {
       return "Seek the Tideglass Beacon";
     case "gather-materials":
       return "Gather river materials for the camp";
+    case "settle-wisp":
+      return "Settle the river wisp before returning to camp";
     case "return-to-camp":
       return "Return the gathered materials to Founding Camp";
     case "complete":
