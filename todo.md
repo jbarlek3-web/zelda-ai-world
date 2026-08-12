@@ -72,6 +72,13 @@
 - [x] Refactor interact, gather, and pause to consume the shared input-action mapping contract instead of hardcoded scene-specific key and gamepad button checks
 - [x] Add a concrete starting inventory state, update it on each collection, and expose its resource counts through the HUD state
 
+## 10A. Great River Encounter Slice
+- [x] Define a deterministic river-wisp combat state machine with hit windows, recovery, defeat, and a no-soft-lock reset path
+- [x] Add a mobile-safe strike action with keyboard and gamepad parity, visible cooldown feedback, and a concise combat objective
+- [ ] Add a touch-readable river-wisp encounter that validates player health, defeat, and quest-reward feedback without interrupting navigation
+- [x] Add a combat-specific HUD objective that transitions back to the founding objective after the river wisp is settled
+- [x] Surface strike cooldown/readiness in the shared HUD for keyboard and gamepad players, not only the touch control
+
 ## 11. Persistence and Screen Stack
 - [x] Add a versioned three-slot save contract, user-scoped `aurastria_saves` table, and database migration
 - [x] Implement protected save list, load, upsert, and delete procedures with user-ownership enforcement

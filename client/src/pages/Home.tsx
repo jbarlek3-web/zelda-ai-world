@@ -25,6 +25,9 @@ const INITIAL_HUD: AurastriaSceneHandle["hud"] = {
   actionHint: "Follow the turquoise beacon to begin the founding task.",
   inventory: { "river-reed": 0, "smooth-stone": 0 },
   navigation: { bearingDegrees: 0, distance: 0 },
+  vitality: 3,
+  wispHealth: 3,
+  strikeReady: true,
   paused: false,
 };
 
@@ -162,6 +165,8 @@ export default function Home() {
             <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[0.65rem] uppercase tracking-[0.1em] text-[#d9b867] sm:block sm:text-xs sm:tracking-[0.15em]">
               <span>{hud.progress}</span>
               <span>Satchel · {hud.inventory["river-reed"]} reeds · {hud.inventory["smooth-stone"]} stones</span>
+              <span>Vitality · {hud.vitality}/3 · Wisp · {hud.wispHealth}/3</span>
+              <span>River-staff · {hud.strikeReady ? "ready" : "recovering"}</span>
             </div>
             <p className="mt-1 line-clamp-1 text-[0.68rem] leading-4 text-[#c8d7b6] sm:mt-3 sm:line-clamp-2 sm:text-xs sm:leading-5">{hud.actionHint}</p>
           </section>
@@ -175,7 +180,7 @@ export default function Home() {
       {screen === "title" ? <TitleMenu signedIn={isAuthenticated} online={online} canInstall={installPrompt !== null} installHint={installPrompt ? null : installHint} slots={savedSlots} selectedSlot={selectedSlot} busy={authLoading || loadSave.isFetching} onSelectSlot={setSelectedSlot} onBegin={() => void beginJourney()} onSignIn={startLogin} onInstall={() => void requestInstall()} onSettings={() => { setSettingsReturnTo("title"); setScreen("settings"); }} onDeleteSlot={(slot) => void deleteSlot(slot)} /> : null}
       {screen === "play" && hud.paused ? <PauseMenu signedIn={isAuthenticated} online={online} saving={upsertSave.isPending} onResume={() => scene?.setPaused(false)} onSave={() => void saveJourney()} onSettings={() => { setSettingsReturnTo("play"); setScreen("settings"); }} onTitle={returnToTitle} /> : null}
       {screen === "settings" ? <SettingsMenu uiScale={uiScale} onUiScaleChange={updateUiScale} onClose={() => setScreen(settingsReturnTo)} /> : null}
-      {screen === "play" && !hud.paused ? <TouchControls onMove={(direction) => scene?.setTouchMove(direction)} onAction={(action) => scene?.triggerAction(action)} /> : null}
+      {screen === "play" && !hud.paused ? <TouchControls strikeReady={hud.strikeReady} onMove={(direction) => scene?.setTouchMove(direction)} onAction={(action) => scene?.triggerAction(action)} /> : null}
     </main>
   );
 }

@@ -22,6 +22,7 @@ import { deriveRiverArtDirection } from "@/game/render/riverArtDirection";
 import { beaconArrivalScale } from "@/game/render/beaconMotion";
 import { beaconNavigation, type BeaconNavigation } from "@/game/navigation/beaconCompass";
 import { combinedMoveDirection, isGamepadActionPressed, isKeyboardAction } from "@/game/input/inputActions";
+import { createRiverWisp, stepRiverWisp, type RiverWispState } from "@/game/features/combat/riverWispCombat";
 import { createSceneSaveState, restoreFoundingQuest } from "@/game/features/saves/sceneSaveState";
 import type { SaveStateInput } from "@shared/game/schemas";
 import {
@@ -61,12 +62,20 @@ interface GatherNode {
   collected: boolean;
 }
 
+interface RiverWispRuntime {
+  readonly mesh: Mesh;
+  readonly light: PointLight;
+}
+
 export interface AurastriaHud {
   readonly objective: string;
   readonly progress: string;
   readonly actionHint: string;
   readonly inventory: FoundingInventory;
   readonly navigation: BeaconNavigation;
+  readonly vitality: number;
+  readonly wispHealth: number;
+  readonly strikeReady: boolean;
   readonly paused: boolean;
 }
 
@@ -78,7 +87,7 @@ export interface AurastriaSceneHandle {
   loadState(state: SaveStateInput): void;
   setPaused(paused: boolean): void;
   setTouchMove(direction: Readonly<{ x: number; y: number }> | null): void;
-  triggerAction(action: "interact" | "gather" | "pause"): void;
+  triggerAction(action: "interact" | "gather" | "strike" | "pause"): void;
   onStatus(listener: (status: string) => void): () => void;
   onHud(listener: (hud: AurastriaHud) => void): () => void;
   dispose(): void;
@@ -124,11 +133,10 @@ function buildIllustratedGroundMarker(scene: Scene, name: string, source: string
   const material = new StandardMaterial(`${name}-material`, scene);
   const texture = new Texture(source, scene, false, false);
   texture.hasAlpha = true;
+  texture.getAlphaFromRGB = false;
   material.diffuseTexture = texture;
-  material.opacityTexture = texture;
   material.useAlphaFromDiffuseTexture = true;
-  material.transparencyMode = Material.MATERIAL_ALPHATEST;
-  material.alphaCutOff = 0.02;
+  material.transparencyMode = Material.MATERIAL_ALPHABLEND;
   material.specularColor = Color3.Black();
   material.backFaceCulling = false;
   material.disableLighting = true;
@@ -273,6 +281,20 @@ function buildRiverMotes(scene: Scene, anchor: Vector3, seed: number): readonly 
   return motes;
 }
 
+function buildRiverWisp(scene: Scene): RiverWispRuntime {
+  const position = toWorldPosition(13, 14).add(new Vector3(0, 0.58, 0));
+  const material = createMaterial(scene, "river-wisp-material", "#6EE9DA", "#2CBDBA");
+  material.disableLighting = true;
+  const mesh = MeshBuilder.CreateSphere("river-wisp", { diameter: 0.62, segments: 6 }, scene);
+  mesh.position = position;
+  mesh.material = material;
+  const light = new PointLight("river-wisp-light", position.clone(), scene);
+  light.diffuse = Color3.FromHexString("#6EE9DA");
+  light.intensity = 0.62;
+  light.range = 3.2;
+  return { mesh, light };
+}
+
 function buildGatherNodes(scene: Scene): GatherNode[] {
   const reedMaterial = createMaterial(scene, "quest-river-reed", "#B8D978", "#527843");
   reedMaterial.disableLighting = true;
@@ -333,6 +355,9 @@ export function createAurastriaScene(engine: Engine, canvas: HTMLCanvasElement):
     actionHint: "Follow the turquoise beacon to begin the founding task.",
     inventory: { "river-reed": 0, "smooth-stone": 0 },
     navigation: { bearingDegrees: 0, distance: 0 },
+    vitality: 3,
+    wispHealth: 3,
+    strikeReady: true,
     paused: false,
   };
 
@@ -389,6 +414,7 @@ export function createAurastriaScene(engine: Engine, canvas: HTMLCanvasElement):
   hearthLight.intensity = 0.78;
   hearthLight.range = 5;
   const gatherNodes = buildGatherNodes(scene);
+  const riverWispRuntime = buildRiverWisp(scene);
   const campPosition = toWorldPosition(7, 12);
   const pressed = new Set<string>();
   const movementKeys = new Set<string>(["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "KeyW", "KeyA", "KeyS", "KeyD"]);
@@ -397,12 +423,16 @@ export function createAurastriaScene(engine: Engine, canvas: HTMLCanvasElement):
   let renderBudgetLogged = false;
   let wasInteractPressed = false;
   let wasGatherPressed = false;
+  let wasStrikePressed = false;
   let wasPausePressed = false;
   let beaconArrivalStartedAt: number | undefined;
   let wasNearBeacon = false;
   let lastActionHint = hud.actionHint;
   let touchMove: Readonly<{ x: number; y: number }> | null = null;
   let lastNavigationUpdateAt = 0;
+  let riverWisp: RiverWispState = createRiverWisp();
+  let playerVitality = 3;
+  let strikeCooldownEndsAt = 0;
 
   const syncPlayerMarker = () => {
     playerToken.position.set(player.position.x, 0.055, player.position.z);
@@ -417,15 +447,22 @@ export function createAurastriaScene(engine: Engine, canvas: HTMLCanvasElement):
     { x: player.position.x, z: player.position.z },
     { x: terrainRuntime.beaconPosition.x, z: terrainRuntime.beaconPosition.z },
   );
-  hud = { ...hud, navigation: currentNavigation() };
+  const isStrikeReady = () => performance.now() >= strikeCooldownEndsAt;
+  const currentObjective = () => riverWisp.phase === "defeated"
+    ? foundingObjective(quest)
+    : "Settle the river wisp";
+  hud = { ...hud, objective: currentObjective(), navigation: currentNavigation() };
 
   const publishHud = (actionHint: string) => {
     hud = {
-      objective: foundingObjective(quest),
+      objective: currentObjective(),
       progress: foundingProgress(quest),
       actionHint,
       inventory: quest.inventory,
       navigation: currentNavigation(),
+      vitality: playerVitality,
+      wispHealth: riverWisp.health,
+      strikeReady: isStrikeReady(),
       paused: hud.paused,
     };
     events.emit("hud", hud);
@@ -522,7 +559,35 @@ export function createAurastriaScene(engine: Engine, canvas: HTMLCanvasElement):
     events.emit("status", `Collected ${label}. ${foundingProgress(quest)}.`);
   };
 
-  const triggerAction = (action: "interact" | "gather" | "pause") => {
+  const attemptStrike = () => {
+    if (riverWisp.phase === "defeated") {
+      events.emit("status", "The river wisp has dissolved into harmless Tideglass light.");
+      return;
+    }
+    if (!isStrikeReady()) {
+      events.emit("status", "Your river-staff is recovering. Hold your ground for a breath.");
+      return;
+    }
+    strikeCooldownEndsAt = performance.now() + 360;
+    const distance = Vector3.Distance(player.position, riverWispRuntime.mesh.position);
+    const result = stepRiverWisp(riverWisp, { distanceToPlayer: distance, deltaMs: 0, playerStrike: true });
+    riverWisp = result.state;
+    if (result.state.health < hud.wispHealth) {
+      if (result.state.phase === "defeated") {
+        riverWispRuntime.mesh.setEnabled(false);
+        riverWispRuntime.light.setEnabled(false);
+        publishHud("The river is quiet. The Tideglass route is safe for the camp.");
+        events.emit("status", "River wisp settled. The camp recognizes your steady hand.");
+      } else {
+        publishHud(`River wisp steadied. ${result.state.health} breaths of turbulence remain.`);
+        events.emit("status", "Your river-staff meets the wisp’s current.");
+      }
+      return;
+    }
+    publishHud("Your strike finds only water. Move closer to the river wisp.");
+  };
+
+  const triggerAction = (action: "interact" | "gather" | "strike" | "pause") => {
     if (action === "pause") {
       setPaused(!hud.paused);
       return;
@@ -530,6 +595,7 @@ export function createAurastriaScene(engine: Engine, canvas: HTMLCanvasElement):
     if (hud.paused) return;
     if (action === "interact") attemptInteract();
     if (action === "gather") attemptGather();
+    if (action === "strike") attemptStrike();
   };
 
   const onKeyDown = (event: KeyboardEvent) => {
@@ -554,6 +620,13 @@ export function createAurastriaScene(engine: Engine, canvas: HTMLCanvasElement):
       event.preventDefault();
       if (!event.repeat) {
         attemptGather();
+      }
+      return;
+    }
+    if (isKeyboardAction("strike", event.code)) {
+      event.preventDefault();
+      if (!event.repeat) {
+        attemptStrike();
       }
       return;
     }
@@ -608,6 +681,7 @@ export function createAurastriaScene(engine: Engine, canvas: HTMLCanvasElement):
     const gamepad = navigator.getGamepads?.()[0] ?? undefined;
     const interactPressed = isGamepadActionPressed("interact", gamepad);
     const gatherPressed = isGamepadActionPressed("gather", gamepad);
+    const strikePressed = isGamepadActionPressed("strike", gamepad);
     const pausePressed = isGamepadActionPressed("pause", gamepad);
     if (pausePressed && !wasPausePressed) {
       setPaused(!hud.paused);
@@ -619,10 +693,46 @@ export function createAurastriaScene(engine: Engine, canvas: HTMLCanvasElement):
     if (!hud.paused && gatherPressed && !wasGatherPressed) {
       attemptGather();
     }
+    if (!hud.paused && strikePressed && !wasStrikePressed) {
+      attemptStrike();
+    }
     wasInteractPressed = interactPressed;
     wasGatherPressed = gatherPressed;
+    wasStrikePressed = strikePressed;
     if (hud.paused) {
       return;
+    }
+
+    if (riverWisp.phase !== "defeated") {
+      const wispDistance = Vector3.Distance(player.position, riverWispRuntime.mesh.position);
+      const result = stepRiverWisp(riverWisp, {
+        distanceToPlayer: wispDistance,
+        deltaMs: engine.getDeltaTime(),
+        playerStrike: false,
+      });
+      riverWisp = result.state;
+      if (riverWisp.phase === "approach" && wispDistance > 1.35) {
+        const moveScale = Math.min(1, engine.getDeltaTime() / 1000 * 1.1 / wispDistance);
+        riverWispRuntime.mesh.position.x += (player.position.x - riverWispRuntime.mesh.position.x) * moveScale;
+        riverWispRuntime.mesh.position.z += (player.position.z - riverWispRuntime.mesh.position.z) * moveScale;
+        riverWispRuntime.light.position.copyFrom(riverWispRuntime.mesh.position);
+      }
+      if (result.playerDamage > 0) {
+        playerVitality = Math.max(0, playerVitality - result.playerDamage);
+        if (playerVitality === 0) {
+          playerVitality = 3;
+          player.position.copyFrom(campPosition);
+          syncPlayerMarker();
+          publishHud("The camp steadies you. Return to the river when ready.");
+          events.emit("status", "The river carries you safely back to camp. No journey progress was lost.");
+        } else {
+          publishHud("The river wisp’s current stings. Keep space, then strike when ready.");
+        }
+      }
+    }
+    if (hud.strikeReady !== isStrikeReady()) {
+      hud = { ...hud, strikeReady: isStrikeReady(), vitality: playerVitality, wispHealth: riverWisp.health };
+      events.emit("hud", hud);
     }
 
     const inputDirection = touchMove ?? combinedMoveDirection(pressed, gamepad);

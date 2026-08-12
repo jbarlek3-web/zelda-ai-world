@@ -1,10 +1,11 @@
 import { useRef } from "react";
 
-type TouchAction = "interact" | "gather" | "pause";
+type TouchAction = "interact" | "gather" | "strike" | "pause";
 
 interface TouchControlsProps {
   readonly onMove: (direction: Readonly<{ x: number; y: number }> | null) => void;
   readonly onAction: (action: TouchAction) => void;
+  readonly strikeReady: boolean;
 }
 
 function clampDirection(x: number, y: number): Readonly<{ x: number; y: number }> {
@@ -13,7 +14,7 @@ function clampDirection(x: number, y: number): Readonly<{ x: number; y: number }
   return length > 1 ? { x: x / length, y: y / length } : { x, y };
 }
 
-export function TouchControls({ onMove, onAction }: TouchControlsProps) {
+export function TouchControls({ onMove, onAction, strikeReady }: TouchControlsProps) {
   const padRef = useRef<HTMLButtonElement | null>(null);
 
   const updateDirection = (clientX: number, clientY: number) => {
@@ -41,7 +42,8 @@ export function TouchControls({ onMove, onAction }: TouchControlsProps) {
       <div className="grid grid-cols-2 gap-2">
         <button type="button" aria-label="Interact with nearby landmark" className="min-h-12 min-w-12 rounded-full border border-[#d9b867]/65 bg-[#173f34]/90 px-4 text-xs uppercase tracking-[0.12em] text-[#f7e9c2] shadow-[0_8px_24px_rgba(0,0,0,0.3)] active:scale-[0.97] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f7e9c2]" onPointerDown={() => onAction("interact")}>Use</button>
         <button type="button" aria-label="Gather nearby resource" className="min-h-12 min-w-12 rounded-full border border-[#d9b867]/65 bg-[#174a42]/90 px-4 text-xs uppercase tracking-[0.12em] text-[#f7e9c2] shadow-[0_8px_24px_rgba(0,0,0,0.3)] active:scale-[0.97] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f7e9c2]" onPointerDown={() => onAction("gather")}>Gather</button>
-        <button type="button" aria-label="Pause journey" className="col-span-2 min-h-10 rounded-full border border-[#d9b867]/35 bg-[#061d17]/80 px-4 text-[0.65rem] uppercase tracking-[0.16em] text-[#d9b867] active:scale-[0.97] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f7e9c2]" onPointerDown={() => onAction("pause")}>Pause</button>
+        <button type="button" aria-label="Strike nearby river wisp" disabled={!strikeReady} className="min-h-12 min-w-12 rounded-full border border-[#65ddd4]/65 bg-[#164b4b]/90 px-4 text-xs uppercase tracking-[0.12em] text-[#e2fffa] shadow-[0_8px_24px_rgba(0,0,0,0.3)] active:scale-[0.97] disabled:opacity-45 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f7e9c2]" onPointerDown={() => onAction("strike")}>{strikeReady ? "Strike" : "Wait"}</button>
+        <button type="button" aria-label="Pause journey" className="col-span-3 min-h-10 rounded-full border border-[#d9b867]/35 bg-[#061d17]/80 px-4 text-[0.65rem] uppercase tracking-[0.16em] text-[#d9b867] active:scale-[0.97] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f7e9c2]" onPointerDown={() => onAction("pause")}>Pause</button>
       </div>
     </div>
   );

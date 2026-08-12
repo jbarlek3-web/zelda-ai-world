@@ -16,6 +16,7 @@ describe("Aurastria input actions", () => {
   it("maps discrete keyboard actions through the shared binding contract", () => {
     expect(isKeyboardAction("interact", "KeyE")).toBe(true);
     expect(isKeyboardAction("gather", "KeyE")).toBe(false);
+    expect(isKeyboardAction("strike", "Space")).toBe(true);
     expect(isKeyboardAction("pause", "Escape")).toBe(true);
   });
 });
