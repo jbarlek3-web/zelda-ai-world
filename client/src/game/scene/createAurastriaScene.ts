@@ -20,6 +20,7 @@ import { resolveFoundingLoopLayout } from "@/game/world/foundingLoopLayout";
 import { hashCoordinates } from "@/game/world/prng";
 import { deriveRiverArtDirection } from "@/game/render/riverArtDirection";
 import { beaconArrivalScale } from "@/game/render/beaconMotion";
+import { FRAME_BUDGET_MS, FrameBudgetCollector } from "@/game/render/frameBudget";
 import { beaconNavigation, type BeaconNavigation } from "@/game/navigation/beaconCompass";
 import { combinedMoveDirection, isGamepadActionPressed, isKeyboardAction } from "@/game/input/inputActions";
 import { isRollReady, resolveRoll, rollRejectionMessage } from "@/game/features/movement/dodgeRoll";
@@ -445,19 +446,34 @@ export function createAurastriaScene(
   beaconLight.diffuse = Color3.FromHexString("#54DDD8");
   beaconLight.intensity = 1.1;
   beaconLight.range = 6.2;
+  // Bound per-pixel lighting cost. The hemispheric fill and directional key are the only lights
+  // allowed to touch arbitrary geometry; each glow light below is restricted to the meshes it is
+  // meant to affect, so adding scenery can never silently multiply lighting work.
+  beaconLight.includedOnlyMeshes = [terrainRuntime.beacon];
 
   const hearthLight = new PointLight("camp-hearth-light", terrainRuntime.campPosition.add(new Vector3(0.25, 0.72, 1.95)), scene);
   hearthLight.diffuse = Color3.FromHexString("#FFB64D");
   hearthLight.intensity = 0.78;
   hearthLight.range = 5;
+  hearthLight.includedOnlyMeshes = scene.meshes.filter((mesh) => mesh.name.startsWith("camp-"));
   const gatherNodes = buildGatherNodes(scene, terrainRuntime.gatherPlacements);
   const riverWispRuntime = buildRiverWisp(scene);
+  riverWispRuntime.light.includedOnlyMeshes = [riverWispRuntime.mesh, riverWispRuntime.halo];
   const campPosition = terrainRuntime.campPosition;
   const pressed = new Set<string>();
   const movementKeys = new Set<string>(["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "KeyW", "KeyA", "KeyS", "KeyD"]);
   let quest = createFoundingQuest();
   let renderedFrames = 0;
   let renderBudgetLogged = false;
+  const frameBudget = new FrameBudgetCollector();
+  /** Wall-clock cost of the scene's own per-frame update work, used to separate
+   *  scene-bound frames from presentation/refresh-bound frames. */
+  const sceneCpuSamples: number[] = [];
+  const medianOf = (values: readonly number[]): number => {
+    if (values.length === 0) return 0;
+    const sorted = [...values].sort((a, b) => a - b);
+    return sorted[Math.floor(sorted.length / 2)];
+  };
   let wasInteractPressed = false;
   let wasGatherPressed = false;
   let wasStrikePressed = false;
@@ -738,15 +754,41 @@ export function createAurastriaScene(
 
   const beforeRender = scene.onBeforeRenderObservable.add(() => {
     renderedFrames += 1;
-    if (!renderBudgetLogged && renderedFrames >= 5) {
-      renderBudgetLogged = true;
-      console.info("[aurastria:render-budget]", {
-        activeMeshes: scene.getActiveMeshes().length,
-        frameTimeMs: Number(engine.getDeltaTime().toFixed(2)),
-        fps: Number(engine.getFps().toFixed(1)),
-        waterMaterials: terrainRuntime.waterMaterials.length,
-        ambientMotes: terrainRuntime.motes.length,
+    if (!renderBudgetLogged) {
+      // Diagnostics only run until the budget sample completes, so production
+      // frames pay nothing for measurement.
+      const sceneUpdateStartedAt = performance.now();
+      scene.onAfterRenderObservable.addOnce(() => {
+        if (sceneCpuSamples.length < 200) {
+          sceneCpuSamples.push(performance.now() - sceneUpdateStartedAt);
+        }
       });
+    }
+    if (!renderBudgetLogged) {
+      const sample = frameBudget.record(engine.getDeltaTime());
+      if (sample) {
+        renderBudgetLogged = true;
+        console.info("[aurastria:render-budget]", {
+          ...sample,
+          budgetMs: FRAME_BUDGET_MS,
+          activeMeshes: scene.getActiveMeshes().length,
+          totalMeshes: scene.meshes.length,
+          drawCallsCumulative: engine._drawCalls?.current ?? null,
+          drawCallsPerFrame: engine._drawCalls?.current !== undefined
+            ? Number((engine._drawCalls.current / Math.max(1, renderedFrames)).toFixed(1))
+            : null,
+          lights: scene.lights.length,
+          textures: scene.textures.length,
+          materials: scene.materials.length,
+          ambientMotes: terrainRuntime.motes.length,
+          // If the scene's own CPU work per frame is a small fraction of the frame
+          // interval, the frame time is presentation/refresh-bound, not scene-bound.
+          sceneCpuMedianMs: Number(medianOf(sceneCpuSamples).toFixed(3)),
+          sceneCpuShareOfFrame: sample.medianFrameMs > 0
+            ? Number(((medianOf(sceneCpuSamples) / sample.medianFrameMs) * 100).toFixed(1))
+            : null,
+        });
+      }
     }
     const elapsedSeconds = performance.now() / 1000;
     terrainRuntime.waterMaterials.forEach((waterMaterial) => {

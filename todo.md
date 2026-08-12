@@ -100,9 +100,11 @@
 - [x] Validate the full spawn → Tideglass → camp chain in one walkable region and fail loudly when invalid
 
 ## 10F. Measured Mobile Performance Budget
-- [ ] Record a warm-up-stable frame-time, draw-call, and active-mesh sample against the 60 FPS / 16.67 ms mobile budget
+- [x] Record a warm-up-stable frame-time, draw-call, and active-mesh sample against the 60 FPS / 16.67 ms mobile budget
+- [x] Measure the scene's own CPU share of the frame to distinguish scene-bound from presentation-bound frames
+- [x] Bound per-pixel lighting cost by scoping every glow point light to its own meshes
 - [ ] Remove per-frame allocations from the render loop hot path (vector/array/object churn)
-- [ ] Fix only the single largest measured bottleneck, then re-measure and report before/after numbers
+- [ ] Re-measure frame time on a release build on real phone hardware (sandbox presents at ~30 Hz, so it cannot verify the 60 FPS budget)
 
 ## 10A. Great River Encounter Slice
 - [x] Define a deterministic river-wisp combat state machine with hit windows, recovery, defeat, and a no-soft-lock reset path
