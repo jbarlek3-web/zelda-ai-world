@@ -1,10 +1,10 @@
 # Project TODO — Legend of the Americas
 
 ## 1. Project Foundation
-- [ ] Initialize WebDev React project (`web-static`)
-- [ ] Install `@babylonjs/core` and dependencies
-- [ ] Implement `GameCanvas.tsx` host component
-- [ ] Define shared constants and types in `shared/game/`
+- [x] Initialize WebDev React project (`web-static`)
+- [x] Install `@babylonjs/core` and dependencies
+- [x] Implement `GameCanvas.tsx` host component
+- [x] Define shared constants and types in `shared/game/`
 
 ## 2. World & Biome Simulation
 - [ ] Implement Simplex/FBM noise-based terrain generation
@@ -36,14 +36,14 @@
 - [ ] Save final checkpoint and publish to `*.manus.space`
 
 ## 7. Aurastria Master-Prompt Scope
-- [ ] Rename planning canon to `Aurastria: Spirits of the First Dawn` and reconcile the prior project title as a working codename
-- [ ] Author eight macro-region specifications, including ecology, settlement patterns, political structures, spirit-realm rules, and accessibility landmarks
+- [x] Rename planning canon to `Aurastria: Spirits of the First Dawn` and reconcile the prior project title as a working codename
+- [x] Author eight macro-region specifications, including ecology, settlement patterns, political structures, spirit-realm rules, and accessibility landmarks
 - [ ] Define settlement progression from founding camp to village, town, city-state, and confederation without rewarding extractive or imperial play as the default optimal path
 - [ ] Model buildings and infrastructure as data: Longhouses, Earth Lodges, Granaries, Sweat Lodges, Council Houses, Docks, Workshops, roads, irrigation, fortifications, naval infrastructure, and agricultural expansion
 - [ ] Create a resource-and-stewardship economy for wood, stone, clay, hides, fibers, metals, crops, fish, knowledge, and ceremonial obligations
 - [ ] Design eight representative faction archetypes, each with governance, values, relations, trade specialties, and non-stereotyped visual direction
 - [ ] Define spirit-based abilities, contracts, purification, dreamwalking, and elemental blessings with explicit consent, cultural-review, and content-safety boundaries
 - [ ] Create an authored main-story spine, repeatable regional quest framework, and dungeon templates with teaching, pacing, gating, and anti-soft-lock validation
-- [ ] Specify AI simulation contracts for NPC goals, faction loyalty, trade, law, diplomacy, navigation, and player-consequence safeguards
-- [ ] Create an art-prompt bible for regions, settlements, characters, creatures, gear, temples, dungeons, and spirit realms using fictional cultures rather than pan-Indigenous amalgams
-- [ ] Establish an Indigenous cultural-review process before final narrative, art, language, ceremony, and sacred-site content are approved
+- [x] Specify AI simulation contracts for NPC goals, faction loyalty, trade, law, diplomacy, navigation, and player-consequence safeguards
+- [x] Create an art-prompt bible for regions, settlements, characters, creatures, gear, temples, dungeons, and spirit realms using fictional cultures rather than pan-Indigenous amalgams
+- [x] Establish an Indigenous cultural-review process before final narrative, art, language, ceremony, and sacred-site content are approved
