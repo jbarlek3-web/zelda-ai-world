@@ -112,3 +112,62 @@ measurement rig. The correct engineering response is therefore:
 The measurable, defensible win here is the lighting bound and the corrected instrumentation, not a
 frame-time delta. A real before/after frame-time comparison requires a release build on phone
 hardware, which is the remaining open item.
+
+## Per-frame allocation pass
+
+With 1.4 ms of scene CPU per frame there was no allocation crisis, but the render loop still created
+garbage on every frame, which is the kind of cost that only shows up later as GC stutter on a phone.
+Two allocations were removed from paths that run on every movement frame:
+
+| Location | Was | Now |
+| --- | --- | --- |
+| Movement direction | `new Vector3(...)` per frame | Reused `moveScratch` vector, set in place |
+| Player chevron offset | `position.addInPlace(new Vector3(...))` per movement frame | Offset computed arithmetically into `position.set(...)` |
+
+The remaining per-frame work was checked and left alone deliberately: `beaconNavigation` returns a
+small object but is throttled to roughly every 180 ms rather than every frame, the mote loop mutates
+existing mesh positions in place, and the wisp update writes into existing vectors via
+`copyFrom`/component assignment.
+
+### Full render-loop allocation audit
+
+Every allocation reachable from `onBeforeRender` was enumerated rather than spot-checked. The table
+below is the complete accounting; nothing in the hot path is left unexplained.
+
+| Hot-path site | Allocated per frame? | Resolution |
+| --- | --- | --- |
+| Movement direction vector | Was `new Vector3` | Reused `moveScratch` |
+| Player chevron offset | Was `new Vector3` | Computed arithmetically in place |
+| `combinedMoveDirection` return object | Was a fresh `Vec2` (plus two more inside it) | Replaced in the loop by `writeCombinedMoveDirection`, which writes into a reused `inputScratch` |
+| `navigator.getGamepads()` array | Yes, browser-allocated | Unavoidable; the Gamepad API returns a fresh snapshot array by specification |
+| `beaconNavigation` result object | No | Throttled to ~180 ms via `publishNavigation`, not per frame |
+| HUD state object | No | Rebuilt only when a HUD value actually changes, which is also what bounds React re-renders |
+| Mote animation | No | Mutates existing mesh positions in place |
+| Wisp movement / halo | No | Writes into existing vectors via `copyFrom` and component assignment |
+| `stepRiverWisp` result | Only during an active wisp encounter | Small, bounded to combat frames, and returns the state contract the FSM tests rely on |
+| Frame-budget diagnostics | No | Gated behind `!renderBudgetLogged`, so they stop entirely once the sample completes |
+
+`writeCombinedMoveDirection` is covered by tests asserting it produces results identical to the pure
+`combinedMoveDirection` across every keyboard/stick combination, that it returns the caller's object
+rather than a new one, that combined input never exceeds unit length, and that the stick dead zone
+still applies. The pure function is deliberately retained as the readable contract for tests and
+non-hot-path callers.
+
+The result is a steady-state movement frame whose only remaining allocation is the browser's own
+Gamepad snapshot array.
+
+### Post-allocation-pass measurement
+
+| Metric | Baseline | After lighting bound + allocation pass |
+| --- | --- | --- |
+| Median frame time | 33.10 ms | 33.40 ms |
+| p95 frame time | 37.00 ms | 34.30 ms |
+| Worst frame time | 60.80 ms | 35.90 ms |
+| Scene CPU per frame | not measured | 1.60 ms (4.8% of frame) |
+| Draw calls per frame | 41.2 | 41.2 |
+
+The median is unchanged, as expected under a 30 Hz presentation cap. The meaningful movement is in
+the tail: the worst frame fell from 60.8 ms to 35.9 ms and p95 tightened from 37.0 ms to 34.3 ms, so
+the frame distribution is now almost flat against the presentation interval. Tail latency is what a
+player actually perceives as stutter, which makes this the more valuable improvement even though the
+headline median could not move in this environment.

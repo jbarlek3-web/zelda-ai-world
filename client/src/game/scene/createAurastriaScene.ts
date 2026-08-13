@@ -22,7 +22,7 @@ import { deriveRiverArtDirection } from "@/game/render/riverArtDirection";
 import { beaconArrivalScale } from "@/game/render/beaconMotion";
 import { FRAME_BUDGET_MS, FrameBudgetCollector } from "@/game/render/frameBudget";
 import { beaconNavigation, type BeaconNavigation } from "@/game/navigation/beaconCompass";
-import { combinedMoveDirection, isGamepadActionPressed, isKeyboardAction } from "@/game/input/inputActions";
+import { combinedMoveDirection, isGamepadActionPressed, isKeyboardAction, writeCombinedMoveDirection } from "@/game/input/inputActions";
 import { isRollReady, resolveRoll, rollRejectionMessage } from "@/game/features/movement/dodgeRoll";
 import { createRiverWisp, stepRiverWisp, type RiverWispState } from "@/game/features/combat/riverWispCombat";
 import { createSceneSaveState, restoreFoundingQuest } from "@/game/features/saves/sceneSaveState";
@@ -466,6 +466,10 @@ export function createAurastriaScene(
   let renderedFrames = 0;
   let renderBudgetLogged = false;
   const frameBudget = new FrameBudgetCollector();
+  /** Scratch vector reused by the per-frame movement path to avoid allocation churn. */
+  const moveScratch = new Vector3(0, 0, 0);
+  /** Scratch input vector reused by the per-frame movement read. */
+  const inputScratch = { x: 0, y: 0 };
   /** Wall-clock cost of the scene's own per-frame update work, used to separate
    *  scene-bound frames from presentation/refresh-bound frames. */
   const sceneCpuSamples: number[] = [];
@@ -501,8 +505,13 @@ export function createAurastriaScene(
     playerToken.position.set(player.position.x, 0.055, player.position.z);
     playerToken.rotation.y = player.rotation.y;
     playerCore.position.set(player.position.x, 0.16, player.position.z);
-    playerChevron.position.set(player.position.x, 0.19, player.position.z);
-    playerChevron.position.addInPlace(new Vector3(Math.sin(player.rotation.y) * 0.28, 0, Math.cos(player.rotation.y) * 0.28));
+    // Compute the chevron offset arithmetically; this runs on every movement frame,
+    // so allocating a temporary Vector3 here would be per-frame garbage.
+    playerChevron.position.set(
+      player.position.x + Math.sin(player.rotation.y) * 0.28,
+      0.19,
+      player.position.z + Math.cos(player.rotation.y) * 0.28,
+    );
     playerChevron.rotation.y = player.rotation.y;
   };
 
@@ -903,8 +912,10 @@ export function createAurastriaScene(
       events.emit("hud", hud);
     }
 
-    const inputDirection = touchMove ?? combinedMoveDirection(pressed, gamepad);
-    const direction = new Vector3(inputDirection.x, 0, inputDirection.y);
+    const inputDirection = touchMove ?? writeCombinedMoveDirection(inputScratch, pressed, gamepad);
+    // Reuse a scratch vector: this runs every frame, and a fresh Vector3 per frame
+    // is pure garbage-collector pressure for no benefit.
+    const direction = moveScratch.set(inputDirection.x, 0, inputDirection.y);
     if (direction.lengthSquared() === 0) {
       return;
     }

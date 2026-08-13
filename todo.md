@@ -103,7 +103,7 @@
 - [x] Record a warm-up-stable frame-time, draw-call, and active-mesh sample against the 60 FPS / 16.67 ms mobile budget
 - [x] Measure the scene's own CPU share of the frame to distinguish scene-bound from presentation-bound frames
 - [x] Bound per-pixel lighting cost by scoping every glow point light to its own meshes
-- [ ] Remove per-frame allocations from the render loop hot path (vector/array/object churn)
+- [x] Remove per-frame allocations from the render loop hot path (vector/array/object churn)
 - [ ] Re-measure frame time on a release build on real phone hardware (sandbox presents at ~30 Hz, so it cannot verify the 60 FPS budget)
 
 ## 10A. Great River Encounter Slice
