@@ -104,6 +104,19 @@ export interface AurastriaSceneHandle {
   setPaused(paused: boolean): void;
   setTouchMove(direction: Readonly<{ x: number; y: number }> | null): void;
   triggerAction(action: "interact" | "gather" | "strike" | "roll" | "pause"): void;
+  /**
+   * Move the explorer directly to a world position, clamped to the map. Used by
+   * verification harnesses to reach objective sites without simulating a long
+   * input session, and by future fast-travel features.
+   */
+  movePlayerTo(position: Readonly<{ x: number; z: number }>): void;
+  /** World positions of objective sites, for navigation aids and verification. */
+  getObjectiveSites(): Readonly<{
+    readonly camp: Readonly<{ x: number; z: number }>;
+    readonly beacon: Readonly<{ x: number; z: number }>;
+    readonly wisp: Readonly<{ x: number; z: number }>;
+    readonly gatherNodes: readonly Readonly<{ kind: string; x: number; z: number; collected: boolean }>[];
+  }>;
   onStatus(listener: (status: string) => void): () => void;
   onHud(listener: (hud: AurastriaHud) => void): () => void;
   dispose(): void;
@@ -946,6 +959,24 @@ export function createAurastriaScene(
     setPaused,
     setTouchMove: (direction) => { touchMove = direction; },
     triggerAction,
+    movePlayerTo: ({ x, z }) => {
+      player.position.x = Math.max(worldBounds.minX, Math.min(worldBounds.maxX, x));
+      player.position.z = Math.max(worldBounds.minZ, Math.min(worldBounds.maxZ, z));
+      syncPlayerMarker();
+      publishNavigation(performance.now());
+      camera.target.copyFrom(player.position);
+    },
+    getObjectiveSites: () => ({
+      camp: { x: campPosition.x, z: campPosition.z },
+      beacon: { x: terrainRuntime.beaconPosition.x, z: terrainRuntime.beaconPosition.z },
+      wisp: { x: riverWispRuntime.mesh.position.x, z: riverWispRuntime.mesh.position.z },
+      gatherNodes: gatherNodes.map((node) => ({
+        kind: node.kind,
+        x: node.position.x,
+        z: node.position.z,
+        collected: node.collected,
+      })),
+    }),
     onStatus: (listener) => events.on("status", listener),
     onHud: (listener) => events.on("hud", listener),
     dispose: () => {

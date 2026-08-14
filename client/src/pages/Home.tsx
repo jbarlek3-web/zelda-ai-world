@@ -139,6 +139,12 @@ export default function Home() {
 
   const handleGameReady = (handle: AurastriaSceneHandle) => {
     setScene(handle);
+    if (import.meta.env.DEV) {
+      // Development-only verification hook: lets an automated harness drive the
+      // founding loop without simulating a long input session. Stripped from
+      // production builds by the DEV guard.
+      (window as unknown as { __aurastriaScene?: AurastriaSceneHandle }).__aurastriaScene = handle;
+    }
     if (pendingSaveRef.current) {
       handle.loadState(pendingSaveRef.current);
       pendingSaveRef.current = null;
