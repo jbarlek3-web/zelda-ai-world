@@ -18,6 +18,7 @@ describe("Aurastria PWA contract", () => {
   });
 
   it("keeps the mobile viewport and theme contract in the HTML shell", () => {
+    expect(indexHtml).toContain("<title>Aurastria: Spirits of the First Dawn</title>");
     expect(indexHtml).toContain("viewport-fit=cover");
     expect(indexHtml).toContain('name="theme-color" content="#08251e"');
     expect(indexHtml).toContain('rel="icon" href="/pwa-icon.svg"');
