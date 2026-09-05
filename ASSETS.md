@@ -114,3 +114,8 @@ The current implementation uses the supplied resource sites as sourcing and visu
 | Dungeon boss | 2,000–3,500 triangles | 5–8 shared materials | Scoped emissive accents; phase changes without mesh churn | Domain FSM complete; scene visual integration pending |
 
 All current shipped character geometry is original procedural Babylon geometry, so no unverified external asset is redistributed. The runtime contract is intentionally compatible with a later verified GLB import.
+
+
+## 16. Great River Spine Silhouette Refinement
+
+The Tideglass beacon now uses an original faceted crystal, a shared emissive aura ring, and three floating shard accents. River-reed and smooth-stone gathering targets now use original emissive ground rings in addition to their existing low-poly bodies. These additions are authored Babylon geometry and do not depend on any external asset license.
