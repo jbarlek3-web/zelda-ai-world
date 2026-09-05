@@ -171,3 +171,24 @@ the tail: the worst frame fell from 60.8 ms to 35.9 ms and p95 tightened from 37
 the frame distribution is now almost flat against the presentation interval. Tail latency is what a
 player actually perceives as stutter, which makes this the more valuable improvement even though the
 headline median could not move in this environment.
+
+
+## Post-humanoid art-pass sample — 2026-09-05
+
+The live dev browser produced a warm-up-stable sample after the humanoid explorer and camp guide were added. The sandbox/browser renderer was under heavy presentation load, while the scene CPU share remained low:
+
+| Metric | Post-humanoid sample |
+| --- | ---: |
+| Median whole frame | 115.7 ms |
+| p95 whole frame | 134.9 ms |
+| Worst observed frame | 143.8 ms |
+| Effective FPS | 8.6 |
+| Scene CPU median | 2.3 ms |
+| Scene CPU share | 2% |
+| Active meshes | 90 |
+| Total meshes | 219 |
+| Draw calls per frame | 63.2 |
+| Materials | 33 |
+| Lights | 5 |
+
+This is not a release-device result. The 2% scene CPU share and low 63-draw-call submission rate indicate that the new character geometry is not the dominant cost; the headless software/presentation renderer is the limiting factor. The mesh increase is bounded and the scene remains structurally mobile-safe, but a real phone release-build sample is still required before claiming a 60 FPS result.

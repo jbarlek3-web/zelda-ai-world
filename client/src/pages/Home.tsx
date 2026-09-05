@@ -207,10 +207,19 @@ export default function Home() {
       ) : null}
       <div className={`pointer-events-none relative z-10 flex min-h-screen flex-col justify-between px-3 pb-[max(1rem,env(safe-area-inset-bottom))] pt-[max(0.75rem,env(safe-area-inset-top))] sm:px-8 sm:pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:pt-[max(1.25rem,env(safe-area-inset-top))] lg:px-12 ${screen === "play" && !hud.paused ? "" : "opacity-55"}`}>
         <header className="flex max-w-xl items-start justify-between gap-3 rounded-sm border border-[#d9b867]/50 bg-[#08251e]/80 px-3 py-2.5 shadow-[0_14px_55px_rgba(0,0,0,0.36)] backdrop-blur-sm sm:block sm:px-5 sm:py-4">
+          <div className="flex items-start gap-3">
+            <div className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-full border border-[#3dd4cc]/60 bg-[#12382d]/80 text-[#bceee5]" aria-label="Tideglass river emblem">
+              <svg aria-hidden="true" viewBox="0 0 32 32" className="h-6 w-6" fill="none">
+                <path d="M16 3 22.4 10 20 25.5 16 29 12 25.5 9.6 10 16 3Z" stroke="currentColor" strokeWidth="1.4" />
+                <path d="M11.5 15.2c2.2 1.7 4.8 1.7 7 0s4.8-1.7 7 0" stroke="#d9b867" strokeWidth="1.25" strokeLinecap="round" />
+                <path d="M12 20.4c2.2 1.7 4.8 1.7 7 0s4.8-1.7 7 0" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" opacity=".8" />
+              </svg>
+            </div>
           <div>
             <p className="font-serif text-[0.6rem] uppercase tracking-[0.2em] text-[#d9b867] sm:text-xs sm:tracking-[0.26em]">Great River Spine · Founding Season</p>
             <h1 className="mt-2 hidden font-serif text-3xl font-semibold leading-none sm:block sm:text-4xl">{GAME_TITLE}</h1>
             <p className="mt-1 max-w-lg text-xs leading-5 text-[#f0dfb6]/85 sm:mt-3 sm:text-sm sm:leading-6">{screen === "play" ? hud.objective : status}</p>
+          </div>
           </div>
           <div className="grid h-11 w-11 shrink-0 place-items-center rounded-full border border-[#3dd4cc]/60 bg-[#12382d]/80 text-center text-[#bceee5] sm:hidden" aria-label={`Tideglass Beacon ${hud.navigation.distance} steps away, bearing ${hud.navigation.bearingDegrees} degrees`}>
             <span className="text-sm leading-none" style={{ display: "inline-block", transform: `rotate(${hud.navigation.bearingDegrees}deg)` }}>▲</span>
