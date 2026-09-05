@@ -144,7 +144,8 @@
 - [x] Replace the current terrain tiles, primitive camp meshes, and player cylinder with a cohesive low-poly or painted-sprite asset system that remains performant on mobile GPUs
 - [x] Add a lightweight original Tideglass route language—dashed river-light markers and landmark emphasis—so the illustrated terrain communicates an actionable path without restoring a visible grid
 - [x] Verify PWA manifest, app-shell, generated service-worker artifact, and install-prompt fallback contracts automatically.
-- [ ] Verify actual offline reload and native installability in a browser or on a device; artifact tests do not claim this behavior.
+- [x] Verify actual offline reload in the published domain with an active service worker and delayed shell hydration.
+- [ ] Verify native installability in a Chromium browser or on a physical device; Firefox does not expose `beforeinstallprompt` in the tested profile.
 - [x] Add deterministic PWA manifest, app-shell, service-worker artifact, and install-prompt contract tests.
 - [x] Validate touch controls and visual readability at 375×812 and 390×844 viewports.
 - [x] Maintain a stable dungeon frame-budget sample at 390×844 and record 375×812 visual evidence without overclaiming a second frame-time sample.
