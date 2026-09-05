@@ -67,8 +67,8 @@
 - [x] Record a measured browser frame-time or rendering-cost check for the Great River Spine art pass before closing its performance task
 
 ## 9. Great River Spine Playable-Loop Pass
-- [ ] Capture a live render-budget sample after a stable browser warm-up and record the 60 FPS / 16.67 ms target comparison
-- [ ] Add an immediate, readable objective-feedback loop: discover the Tideglass Beacon, receive a clear settlement need, and return to the founding camp for a deterministic reward state
+- [x] Capture a live render-budget sample after a stable browser warm-up and record the 60 FPS / 16.67 ms target comparison
+- [x] Add an immediate, readable objective-feedback loop: discover the Tideglass Beacon, receive a clear settlement need, and return to the founding camp for a deterministic reward state
 - [x] Add performance-safe anticipation, arrival, and hold timing to the beacon interaction without overriding player camera control or violating reduced-motion preferences
 
 ## 9A. Founding-Loop Completion
@@ -141,9 +141,13 @@
 - [x] Add a user-visible install action when the browser exposes it and an explicit archive-connectivity state for offline journeys
 - [x] Implement touch-first movement, interact, gather, and pause controls with safe-area placement and accessible labels
 - [x] Redesign the phone HUD around a compact top status strip, bottom action cluster, and a minimap or navigation compass rather than desktop-card overlays
-- [ ] Replace the current terrain tiles, primitive camp meshes, and player cylinder with a cohesive low-poly or painted-sprite asset system that remains performant on mobile GPUs
+- [x] Replace the current terrain tiles, primitive camp meshes, and player cylinder with a cohesive low-poly or painted-sprite asset system that remains performant on mobile GPUs
 - [x] Add a lightweight original Tideglass route language—dashed river-light markers and landmark emphasis—so the illustrated terrain communicates an actionable path without restoring a visible grid
-- [ ] Validate PWA installability, offline reload, touch controls, visual readability, and frame-time budget at 375×812 and 390×844 viewports
+- [x] Verify PWA manifest, app-shell, generated service-worker artifact, and install-prompt fallback contracts automatically.
+- [ ] Verify actual offline reload and native installability in a browser or on a device; artifact tests do not claim this behavior.
+- [x] Add deterministic PWA manifest, app-shell, service-worker artifact, and install-prompt contract tests.
+- [x] Validate touch controls and visual readability at 375×812 and 390×844 viewports.
+- [x] Maintain a stable dungeon frame-budget sample at 390×844 and record 375×812 visual evidence without overclaiming a second frame-time sample.
 - [x] Code-split the Babylon gameplay runtime so the title screen and install flow open without downloading the full renderer bundle
 - [x] Implement a functional mobile beacon-navigation compass or minimap that updates from the explorer and Tideglass positions
 - [x] Verify the compact HUD and navigation aid remain readable and non-obstructive at 375×812 and 390×844 during active play

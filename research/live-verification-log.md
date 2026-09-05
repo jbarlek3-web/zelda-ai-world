@@ -49,3 +49,10 @@ The deterministic dungeon layout and runtime adapter passed focused coverage for
 ## Active-play responsive preview — 2026-09-05
 
 The managed preview captured the active Babylon scene directly at `/?journey=play` and 390×844. The mobile HUD remained readable, the Tideglass emblem and compass were visible, the terrain plate rendered as an illustrated river basin, the original humanoid explorer and camp-guide silhouettes were visible, and the bottom action cluster showed MOVE, USE, GATHER, STRIKE, ROLL, and PAUSE. The separate browser automation session still reset to `about:blank` when navigating or clicking into active play, so direct browser-console traversal of the dungeon sites remains unavailable.
+
+
+## PWA and dual-viewport dungeon verification — 2026-09-05
+
+The new `pwaContract.test.ts` suite passed four checks: standalone portrait manifest metadata, app-shell `navigateFallback`, mobile HTML viewport/theme contract, native `beforeinstallprompt` plus iOS/Android fallback copy, and generated `dist/public/manifest.webmanifest`/`sw.js` artifacts after production build. This is deterministic build-contract evidence; a real browser offline reload and native install prompt remain separate manual checks.
+
+The managed preview captured the dungeon-boss focus at 375×812. The compact top HUD, Tideglass compass, illustrated river plate, dungeon shell, boss silhouette, and MOVE/USE/GATHER/STRIKE/ROLL/PAUSE action cluster remained inside the phone viewport. The latest stable render-budget sample is still the 390×844 dungeon-focused sample; the 375×812 capture is visual evidence only, so no dual-viewport frame-time claim is made.
