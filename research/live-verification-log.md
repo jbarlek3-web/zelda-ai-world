@@ -40,3 +40,7 @@ The browser automation session repeatedly became `about:blank` immediately after
 ## Post-art mobile title verification — 2026-09-05
 
 The title screen was captured at both 390×844 and 375×812 after the Tideglass emblem polish. The background river plate remains visible behind the title panel; the main title, install guidance, archive slots, Enter Journey, Open Atlas, and Settings actions remain readable and inside the viewport. At 375×812 the title wraps to two lines and the lower Settings control approaches the safe-area edge but remains visible; active-play mobile verification is still blocked by the preview tab resetting when the gameplay entry is clicked.
+
+## Functional dungeon runtime verification — 2026-09-05
+
+The deterministic dungeon layout and runtime adapter passed focused coverage for key collection, locked-door opening, chest idempotency, encounter FSM damage, and dungeon-boss defeat. The full regression suite passed with 91 tests, and the production build completed successfully. A responsive 390×844 title-screen capture remained readable after the integration. The browser’s active-play tab reset to `about:blank` immediately after the Babylon WebGL2 scene mounted; the browser console recorded the Babylon WebGL2 startup line but no explicit JavaScript or Babylon exception. The live active-play screenshot therefore remains limited by the preview browser session rather than a recorded application error.

@@ -31,6 +31,10 @@ import { recoverFromRiverWisp } from "@/game/features/survival/foundingLoopRecov
 import { applySettleWispSafeReturn } from "@/game/scene/foundingLoopSceneRecovery";
 import type { SaveStateInput } from "@shared/game/schemas";
 import { DEFAULT_WORLD_SEED } from "@shared/game/constants";
+import { createFirstDungeon } from "@/game/features/dungeon/firstDungeon";
+import { createFirstDungeonWorldLayout } from "@/game/features/dungeon/dungeonLayout";
+import { buildDungeonEnemyVisual, createDungeonVisualMaterials } from "@/game/features/dungeon/dungeonVisuals";
+import { createDungeonRuntime, stepDungeonRuntime, type DungeonRuntimeState } from "@/game/features/dungeon/dungeonRuntime";
 import {
   attuneTideglass,
   collectFoundingMaterial,
@@ -81,6 +85,15 @@ interface RiverWispRuntime {
   readonly mesh: Mesh;
   readonly halo: Mesh;
   readonly light: PointLight;
+}
+
+interface DungeonPreviewRuntime {
+  readonly root: TransformNode;
+  readonly origin: Vector3;
+  readonly key: Mesh;
+  readonly chest: Mesh;
+  readonly door: Mesh;
+  readonly enemies: readonly { readonly name: "Skulltula" | "Moblin" | "Dungeon Boss"; readonly root: TransformNode }[];
 }
 
 export interface AurastriaHud {
@@ -464,6 +477,68 @@ function buildGatherNodes(scene: Scene, placements: readonly { readonly kind: Ga
   });
 }
 
+function buildDungeonPreview(scene: Scene, seed: number): DungeonPreviewRuntime {
+  const dungeonPlan = createFirstDungeon(seed);
+  const layout = createFirstDungeonWorldLayout(dungeonPlan);
+  const root = new TransformNode("first-dungeon-preview", scene);
+  const origin = toWorldPosition(3, 3);
+  const floorMaterial = createMaterial(scene, "dungeon-floor", "#17332F", "#0B1514");
+  const wallMaterial = createMaterial(scene, "dungeon-wall", "#2E554E", "#102522");
+  const goldMaterial = createMaterial(scene, "dungeon-gold", "#D7AE5B", "#4D3515");
+  floorMaterial.disableLighting = true;
+  wallMaterial.disableLighting = true;
+  goldMaterial.disableLighting = true;
+
+  layout.rooms.forEach((room) => {
+    const floor = MeshBuilder.CreateBox(`dungeon-floor-${room.roomId}`, { width: room.halfExtent.x * 2, height: 0.12, depth: room.halfExtent.z * 2 }, scene);
+    floor.position = origin.add(new Vector3(room.center.x, -0.06, room.center.z));
+    floor.material = floorMaterial;
+    floor.parent = root;
+    const wallThickness = 0.16;
+    const wallHeight = 1.3;
+    const wallNorth = MeshBuilder.CreateBox(`dungeon-wall-north-${room.roomId}`, { width: room.halfExtent.x * 2, height: wallHeight, depth: wallThickness }, scene);
+    wallNorth.position = origin.add(new Vector3(room.center.x, wallHeight / 2, room.center.z - room.halfExtent.z));
+    wallNorth.material = wallMaterial;
+    wallNorth.parent = root;
+    const wallSouth = MeshBuilder.CreateBox(`dungeon-wall-south-${room.roomId}`, { width: room.halfExtent.x * 2, height: wallHeight, depth: wallThickness }, scene);
+    wallSouth.position = origin.add(new Vector3(room.center.x, wallHeight / 2, room.center.z + room.halfExtent.z));
+    wallSouth.material = wallMaterial;
+    wallSouth.parent = root;
+    const wallWest = MeshBuilder.CreateBox(`dungeon-wall-west-${room.roomId}`, { width: wallThickness, height: wallHeight, depth: room.halfExtent.z * 2 }, scene);
+    wallWest.position = origin.add(new Vector3(room.center.x - room.halfExtent.x, wallHeight / 2, room.center.z));
+    wallWest.material = wallMaterial;
+    wallWest.parent = root;
+    const wallEast = MeshBuilder.CreateBox(`dungeon-wall-east-${room.roomId}`, { width: wallThickness, height: wallHeight, depth: room.halfExtent.z * 2 }, scene);
+    wallEast.position = origin.add(new Vector3(room.center.x + room.halfExtent.x, wallHeight / 2, room.center.z));
+    wallEast.material = wallMaterial;
+    wallEast.parent = root;
+  });
+
+  const door = MeshBuilder.CreateBox("dungeon-locked-door", { width: 1.2, height: 1.8, depth: 0.22 }, scene);
+  door.position = origin.add(new Vector3(layout.doorPosition.x, 0.9, layout.doorPosition.z));
+  door.material = goldMaterial;
+  door.parent = root;
+  const chest = MeshBuilder.CreateBox("dungeon-treasure-chest", { width: 0.9, height: 0.45, depth: 0.6 }, scene);
+  chest.position = origin.add(new Vector3(layout.chestPosition.x, 0.28, layout.chestPosition.z));
+  chest.material = goldMaterial;
+  chest.parent = root;
+  const key = MeshBuilder.CreateTorus("dungeon-key-marker", { diameter: 0.34, thickness: 0.07, tessellation: 8 }, scene);
+  key.position = origin.add(new Vector3(layout.keyPosition.x, 1.12, layout.keyPosition.z));
+  key.rotation.x = Math.PI / 2;
+  key.material = goldMaterial;
+  key.parent = root;
+
+  const visualMaterials = createDungeonVisualMaterials(scene);
+  const enemies: { name: "Skulltula" | "Moblin" | "Dungeon Boss"; root: TransformNode }[] = [];
+  layout.encounters.forEach((placement) => {
+    const visual = buildDungeonEnemyVisual(scene, placement.name, visualMaterials);
+    visual.root.position = origin.add(new Vector3(placement.position.x, 0, placement.position.z));
+    visual.root.parent = root;
+    enemies.push({ name: placement.name, root: visual.root });
+  });
+  return { root, origin, key, chest, door, enemies };
+}
+
 function buildRiverSpineTerrain(scene: Scene, seed: number): RiverTerrainRuntime {
   // The layout module validates reachability and throws on an unplayable world;
   // the tiles it returns are the tiles rendered below, with no substitution here.
@@ -554,6 +629,7 @@ export function createAurastriaScene(
   dawnLight.diffuse = Color3.FromHexString("#FFD69A");
 
   const terrainRuntime = buildRiverSpineTerrain(scene, worldSeed);
+  const dungeonPreview = buildDungeonPreview(scene, worldSeed);
   const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
   if (reducedMotion) {
     terrainRuntime.motes.forEach((mote) => mote.mesh.setEnabled(false));
@@ -617,6 +693,7 @@ export function createAurastriaScene(
   let playerVitality = 3;
   let strikeCooldownEndsAt = 0;
   let rollCooldownEndsAt = 0;
+  let dungeonRuntime: DungeonRuntimeState = createDungeonRuntime(worldSeed);
 
   const syncWispEncounter = () => {
     const active = quest.step === "settle-wisp" && riverWisp.phase !== "defeated";
@@ -685,6 +762,54 @@ export function createAurastriaScene(
     events.emit("hud", hud);
   };
 
+  const dungeonActionHint = () => {
+    const playerPosition = { x: player.position.x - dungeonPreview.origin.x, z: player.position.z - dungeonPreview.origin.z };
+    const distanceTo = (point: Readonly<{ x: number; z: number }>) => Math.hypot(playerPosition.x - point.x, playerPosition.z - point.z);
+    if (dungeonRuntime.run.currentRoomId === dungeonRuntime.plan.keyRoomId && dungeonRuntime.run.keys === 0 && distanceTo(dungeonRuntime.layout.keyPosition) <= 1.8) return "Dungeon key nearby. Press E / X to collect it.";
+    if (dungeonRuntime.run.currentRoomId === dungeonRuntime.plan.keyRoomId && !dungeonRuntime.run.openedDoor && distanceTo(dungeonRuntime.layout.doorPosition) <= 2.1) return "The locked threshold answers the key. Press E / X to open it.";
+    if (dungeonRuntime.run.currentRoomId === "treasure" && !dungeonRuntime.run.openedChestIds.includes("first-dungeon-chest") && distanceTo(dungeonRuntime.layout.chestPosition) <= 1.8) return "Treasure chest nearby. Press E / X to open it.";
+    if (dungeonRuntime.run.currentRoomId === dungeonRuntime.plan.bossRoomId && !dungeonRuntime.run.bossDefeated) return "Dungeon Boss domain. Strike when the opening appears.";
+    return undefined;
+  };
+
+  const dungeonEventMessage = (event: DungeonRuntimeState["lastEvent"]) => {
+    if (event === "key-collected") return "A small key answers from the dungeon’s dark alcove.";
+    if (event === "door-opened") return "The Tideglass key opens the sealed dungeon threshold.";
+    if (event === "chest-opened") return "The treasure chest opens; the river road grows richer.";
+    if (event === "boss-defeated") return "The dungeon boss falls, and the first domain grows quiet.";
+    return undefined;
+  };
+
+  const syncDungeonPreview = () => {
+    dungeonPreview.key.setEnabled(dungeonRuntime.run.keys === 0);
+    dungeonPreview.door.setEnabled(!dungeonRuntime.run.openedDoor);
+    dungeonPreview.chest.scaling.y = dungeonRuntime.run.openedChestIds.includes("first-dungeon-chest") ? 1.16 : 1;
+    dungeonPreview.enemies.forEach((visual) => {
+      const state = dungeonRuntime.enemies.find((enemy) => enemy.name === visual.name)?.state;
+      if (!state) return;
+      visual.root.setEnabled(state.phase !== "defeated");
+      visual.root.scaling.setAll(state.phase === "windup" ? 1.08 : state.phase === "recover" ? 0.94 : 1);
+      visual.root.position.y = state.phase === "strike" ? 0.16 : state.phase === "approach" ? 0.04 : 0;
+    });
+  };
+
+  const stepDungeon = (deltaMs: number, playerStrike: boolean, interact: boolean) => {
+    const previousHealth = dungeonRuntime.enemies.reduce((total, enemy) => total + enemy.state.health, 0);
+    dungeonRuntime = stepDungeonRuntime(dungeonRuntime, {
+      playerPosition: { x: player.position.x - dungeonPreview.origin.x, z: player.position.z - dungeonPreview.origin.z },
+      deltaMs,
+      playerStrike,
+      interact,
+    });
+    syncDungeonPreview();
+    const eventMessage = dungeonEventMessage(dungeonRuntime.lastEvent);
+    if (eventMessage) events.emit("status", eventMessage);
+    const currentHealth = dungeonRuntime.enemies.reduce((total, enemy) => total + enemy.state.health, 0);
+    return { event: dungeonRuntime.lastEvent, enemyHit: currentHealth < previousHealth };
+  };
+
+  syncDungeonPreview();
+
   const setPaused = (paused: boolean) => {
     hud = { ...hud, paused };
     events.emit("hud", hud);
@@ -709,6 +834,8 @@ export function createAurastriaScene(
   };
 
   const attemptInteract = () => {
+    const dungeonStep = stepDungeon(0, false, true);
+    if (dungeonStep.event !== "none") return;
     const distanceToCamp = Vector3.Distance(player.position, campPosition);
     const distanceToBeacon = Vector3.Distance(player.position, terrainRuntime.beaconPosition);
     if (distanceToBeacon <= 5.5 && quest.step === "seek-beacon") {
@@ -767,6 +894,11 @@ export function createAurastriaScene(
   };
 
   const attemptStrike = () => {
+    const dungeonStep = stepDungeon(0, true, false);
+    if (dungeonStep.enemyHit || dungeonStep.event === "boss-defeated") {
+      publishHud(dungeonStep.event === "boss-defeated" ? "The dungeon boss is defeated." : "The dungeon enemy recoils from the river-staff.");
+      return;
+    }
     if (quest.step !== "settle-wisp") {
       events.emit("status", "The river staff waits for the Tideglass and camp materials to name this current’s purpose.");
       return;
@@ -976,6 +1108,10 @@ export function createAurastriaScene(
     if (hud.paused) {
       return;
     }
+
+    stepDungeon(engine.getDeltaTime(), false, false);
+    const dungeonHint = dungeonActionHint();
+    if (dungeonHint) publishActionHint(dungeonHint);
 
     if (quest.step === "settle-wisp" && riverWisp.phase !== "defeated") {
       const wispDistance = Vector3.Distance(player.position, riverWispRuntime.mesh.position);

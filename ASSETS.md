@@ -119,3 +119,10 @@ All current shipped character geometry is original procedural Babylon geometry, 
 ## 16. Great River Spine Silhouette Refinement
 
 The Tideglass beacon now uses an original faceted crystal, a shared emissive aura ring, and three floating shard accents. River-reed and smooth-stone gathering targets now use original emissive ground rings in addition to their existing low-poly bodies. These additions are authored Babylon geometry and do not depend on any external asset license.
+
+
+## 17. Dungeon Visual Runtime
+
+The first dungeon now renders as a deterministic, cullable Babylon preview/runtime domain. The room shell uses unlit original floor and wall geometry, while the key marker, locked door, treasure chest, and boss landmark use shared gold materials. `dungeonVisuals.ts` provides original procedural low-poly actors for Skulltula, Moblin, and Dungeon Boss; no third-party model archive is bundled. The visuals respond to the existing `FirstDungeonRun` and `DungeonEnemyState` contracts: key pickup hides the key, opening the door hides the threshold, chest opening changes its presentation, defeated actors are disabled, and windup/recover/strike phases alter scale or vertical pose.
+
+The runtime is kept within the mobile budget by using shared unlit materials, low tessellation, persistent meshes, and transform-only phase feedback. The browser preview did not provide a stable active-play capture after Babylon WebGL2 mounted, so the active-play visual screenshot remains an explicit verification limitation rather than a claimed success.

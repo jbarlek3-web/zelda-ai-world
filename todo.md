@@ -156,9 +156,23 @@
 - [x] Define a mobile-safe character asset budget for humanoid explorer, NPC, wisp, Skulltula, Moblin, and dungeon boss presentation.
 - [x] Replace the flat explorer marker stack with a readable humanoid 3D character while preserving a procedural fallback.
 - [x] Add a cohesive humanoid presentation for the explorer and camp guide without using real-world Indigenous symbols, ceremonial dress, or sacred-site references.
-- [ ] Add a cohesive humanoid presentation for Skulltulas, Moblins, and the dungeon boss without using real-world Indigenous symbols, ceremonial dress, or sacred-site references.
+- [x] Add a cohesive low-poly presentation for Skulltulas, Moblins, and the dungeon boss without using real-world Indigenous symbols, ceremonial dress, or sacred-site references.
 - [x] Improve camp, beacon, and gather-node silhouettes so the Great River Spine slice reads as a finished low-poly action-adventure scene.
-- [ ] Add scene-rendered Skulltula, Moblin, and dungeon-boss silhouettes when the dungeon runtime is integrated.
+- [x] Add scene-rendered Skulltula, Moblin, and dungeon-boss silhouettes in the deterministic dungeon preview runtime.
 - [x] Reuse or adapt only assets with verified redistribution terms; do not ship unverified third-party downloads.
 - [x] Re-run typecheck, tests, mobile screenshots, and frame-budget sampling after the art pass.
 - [x] Save an art-upgrade checkpoint with source provenance and measured mobile performance.
+
+
+## 14. Dungeon visual runtime
+- [x] Define deterministic room-to-world composition and encounter placement within a mobile geometry budget.
+- [x] Implement original low-poly Skulltula, Moblin, and dungeon-boss visual builders with shared materials.
+- [x] Add deterministic dungeon preview/runtime scene wiring to the existing first-dungeon domain state.
+- [x] Add key door, treasure, encounter, and boss landmark presentation.
+- [x] Add mobile HUD/readiness feedback for dungeon encounter actions.
+- [x] Test dungeon visual determinism and encounter transitions with focused runtime tests plus the full regression suite.
+- [ ] Capture active-play dungeon responsive readability and post-dungeon frame-budget evidence.
+- [ ] Save a dungeon visual runtime checkpoint with measured results.
+- [x] Wire Babylon dungeon visuals to FirstDungeonRun so current room, key pickup, locked-door opening, chest state, and boss defeat update from domain transitions.
+- [x] Add encounter visual state synchronization so Skulltula, Moblin, and boss visuals respond to DungeonEnemyState phases.
+- [x] Add focused scene/domain tests for key, door, chest, boss, and encounter-phase transitions.
