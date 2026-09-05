@@ -192,3 +192,8 @@ The live dev browser produced a warm-up-stable sample after the humanoid explore
 | Lights | 5 |
 
 This is not a release-device result. The 2% scene CPU share and low 63-draw-call submission rate indicate that the new character geometry is not the dominant cost; the headless software/presentation renderer is the limiting factor. The mesh increase is bounded and the scene remains structurally mobile-safe, but a real phone release-build sample is still required before claiming a 60 FPS result.
+
+
+## Functional dungeon runtime budget note — 2026-09-05
+
+The new dungeon preview adds a bounded six-room shell with four walls and one floor per room, plus one key marker, one locked door, one chest, three persistent enemy roots, and shared unlit materials. Each actor is assembled from low-tessellation primitives and phase changes use transforms only; defeated actors are disabled rather than recreated. The current active-play browser session reset to `about:blank` after Babylon WebGL2 startup, so a stable post-dungeon `FrameBudgetCollector` sample was not captured. The prior post-humanoid sample remains the latest measured browser evidence: 115.7 ms median whole-frame presentation time, 2.3 ms scene CPU, 63.2 draw calls per frame, and 90 active meshes in the sandbox renderer. These values are not release-device performance claims.
