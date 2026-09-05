@@ -45,3 +45,10 @@ The safest first implementation is a Babylon-native stylized humanoid assembled 
 The current pass replaces the player’s flat cylinder/core/chevron stack with an original Babylon-native `TransformNode` humanoid composed of low-tessellation torso, head, hair cap, arms, legs, belt, river staff, staff gem, ground marker, and heading indicator. A second palette variant is placed beside Founding Camp as a fictional humanoid guide landmark. The legacy illustrated player token remains disabled as a safe fallback/reference and is still synchronized for future map-marker use.
 
 The river wisp remains deliberately non-humanoid because it is a spirit encounter and its abstract emissive silhouette is part of the established visual direction. Skulltula, Moblin, and boss visuals remain a separate scene-integration task; their deterministic domain state machines are already covered by tests. The current pass therefore does not claim those encounter visuals are complete.
+
+
+## Quaternius Candidate Pack Evaluation
+
+The [Universal Base Characters page](https://quaternius.com/packs/universalbasecharacters.html) and [official Itch download page](https://quaternius.itch.io/universal-base-characters) identify a CC0 standard pack with two base models and five hairstyles in the free tier, a 122 MB standard archive, and glTF/FBX availability in the pack documentation. The QAL page permits commercial products without credit while prohibiting standalone asset redistribution.
+
+An automated archive request returned an HTML Itch download page rather than a ZIP because the browser’s download session was not transferable to the shell. The response was inspected and deleted; no unverified or malformed archive entered the project or asset registry. The current original Babylon-native humanoid remains the shipped character implementation. A future import should be performed from a verified download session, then optimized and license-recorded before replacing the runtime builder.

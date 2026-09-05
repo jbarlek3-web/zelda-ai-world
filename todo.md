@@ -159,5 +159,5 @@
 - [ ] Add a cohesive humanoid presentation for Skulltulas, Moblins, and the dungeon boss without using real-world Indigenous symbols, ceremonial dress, or sacred-site references.
 - [ ] Improve camp, beacon, gather nodes, and enemy silhouettes so the scene reads as a finished low-poly action-adventure slice rather than a prototype.
 - [x] Reuse or adapt only assets with verified redistribution terms; do not ship unverified third-party downloads.
-- [ ] Re-run typecheck, tests, mobile screenshots, and frame-budget sampling after the art pass.
-- [ ] Save an art-upgrade checkpoint with source provenance and measured mobile performance.
+- [x] Re-run typecheck, tests, mobile screenshots, and frame-budget sampling after the art pass.
+- [x] Save an art-upgrade checkpoint with source provenance and measured mobile performance.
