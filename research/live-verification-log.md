@@ -44,3 +44,8 @@ The title screen was captured at both 390×844 and 375×812 after the Tideglass 
 ## Functional dungeon runtime verification — 2026-09-05
 
 The deterministic dungeon layout and runtime adapter passed focused coverage for key collection, locked-door opening, chest idempotency, encounter FSM damage, and dungeon-boss defeat. The full regression suite passed with 91 tests, and the production build completed successfully. A responsive 390×844 title-screen capture remained readable after the integration. The browser’s active-play tab reset to `about:blank` immediately after the Babylon WebGL2 scene mounted; the browser console recorded the Babylon WebGL2 startup line but no explicit JavaScript or Babylon exception. The live active-play screenshot therefore remains limited by the preview browser session rather than a recorded application error.
+
+
+## Active-play responsive preview — 2026-09-05
+
+The managed preview captured the active Babylon scene directly at `/?journey=play` and 390×844. The mobile HUD remained readable, the Tideglass emblem and compass were visible, the terrain plate rendered as an illustrated river basin, the original humanoid explorer and camp-guide silhouettes were visible, and the bottom action cluster showed MOVE, USE, GATHER, STRIKE, ROLL, and PAUSE. The separate browser automation session still reset to `about:blank` when navigating or clicking into active play, so direct browser-console traversal of the dungeon sites remains unavailable.

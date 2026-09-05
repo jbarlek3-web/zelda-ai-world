@@ -171,7 +171,8 @@
 - [x] Add key door, treasure, encounter, and boss landmark presentation.
 - [x] Add mobile HUD/readiness feedback for dungeon encounter actions.
 - [x] Test dungeon visual determinism and encounter transitions with focused runtime tests plus the full regression suite.
-- [ ] Capture active-play dungeon responsive readability and post-dungeon frame-budget evidence.
+- [x] Capture active-play responsive mobile readability with the dungeon-ready HUD and action cluster at 390×844.
+- [x] Capture a stable dungeon-focused mobile frame-budget sample after adding the development-only encounter focus path.
 - [x] Save a dungeon visual runtime checkpoint with measured results.
 - [x] Wire Babylon dungeon visuals to FirstDungeonRun so current room, key pickup, locked-door opening, chest state, and boss defeat update from domain transitions.
 - [x] Add encounter visual state synchronization so Skulltula, Moblin, and boss visuals respond to DungeonEnemyState phases.

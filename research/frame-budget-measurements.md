@@ -197,3 +197,24 @@ This is not a release-device result. The 2% scene CPU share and low 63-draw-call
 ## Functional dungeon runtime budget note — 2026-09-05
 
 The new dungeon preview adds a bounded six-room shell with four walls and one floor per room, plus one key marker, one locked door, one chest, three persistent enemy roots, and shared unlit materials. Each actor is assembled from low-tessellation primitives and phase changes use transforms only; defeated actors are disabled rather than recreated. The current active-play browser session reset to `about:blank` after Babylon WebGL2 startup, so a stable post-dungeon `FrameBudgetCollector` sample was not captured. The prior post-humanoid sample remains the latest measured browser evidence: 115.7 ms median whole-frame presentation time, 2.3 ms scene CPU, 63.2 draw calls per frame, and 90 active meshes in the sandbox renderer. These values are not release-device performance claims.
+
+
+## Dungeon-focused mobile preview sample — 2026-09-05
+
+The managed preview successfully rendered stable dungeon-focused views at 390×844 using the development-only `dungeon=cache` and `dungeon=boss` focus queries. The warm-up collector reported:
+
+| Metric | Dungeon-focused sample |
+| --- | ---: |
+| Median whole frame | 117.5 ms |
+| p95 whole frame | 128.7 ms |
+| Worst observed frame | 141.1 ms |
+| Effective FPS | 8.5 |
+| Scene CPU median | 2.9 ms |
+| Scene CPU share | 2.5% |
+| Active meshes | 118 |
+| Total meshes | 286 |
+| Draw calls per frame | 90 |
+| Materials | 41 |
+| Lights | 5 |
+
+The sandbox remains presentation-bound and is not a release-device result. The dungeon additions raise active meshes from 90 to 118 and draw calls from 63.2 to 90 per frame while keeping scene CPU at 2.9 ms and 2.5% of the presented frame. The geometry increase is bounded, persistent, and compatible with the mobile target; real-phone release-build validation remains separate.

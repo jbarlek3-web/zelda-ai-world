@@ -131,6 +131,15 @@ export interface AurastriaSceneHandle {
     readonly wisp: Readonly<{ x: number; z: number }>;
     readonly gatherNodes: readonly Readonly<{ kind: string; x: number; z: number; collected: boolean }>[];
   }>;
+  /** Development-only world positions for stable dungeon visual inspection. */
+  getDungeonSites(): Readonly<{
+    readonly entry: Readonly<{ x: number; z: number }>;
+    readonly key: Readonly<{ x: number; z: number }>;
+    readonly cache: Readonly<{ x: number; z: number }>;
+    readonly gate: Readonly<{ x: number; z: number }>;
+    readonly treasure: Readonly<{ x: number; z: number }>;
+    readonly boss: Readonly<{ x: number; z: number }>;
+  }>;
   onStatus(listener: (status: string) => void): () => void;
   onHud(listener: (hud: AurastriaHud) => void): () => void;
   dispose(): void;
@@ -1221,6 +1230,24 @@ export function createAurastriaScene(
         collected: node.collected,
       })),
     }),
+    getDungeonSites: () => {
+      const worldPoint = (point: Readonly<{ x: number; z: number }>) => ({
+        x: dungeonPreview.origin.x + point.x,
+        z: dungeonPreview.origin.z + point.z,
+      });
+      const room = (roomId: string) => {
+        const layoutRoom = dungeonRuntime.layout.rooms.find((candidate) => candidate.roomId === roomId);
+        return worldPoint(layoutRoom?.center ?? { x: 0, z: 0 });
+      };
+      return {
+        entry: room("entry"),
+        key: room(dungeonRuntime.plan.keyRoomId),
+        cache: room("cache"),
+        gate: room("gate"),
+        treasure: room("treasure"),
+        boss: room(dungeonRuntime.plan.bossRoomId),
+      };
+    },
     onStatus: (listener) => events.on("status", listener),
     onHud: (listener) => events.on("hud", listener),
     dispose: () => {

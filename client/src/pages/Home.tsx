@@ -140,6 +140,18 @@ export default function Home() {
   const handleGameReady = (handle: AurastriaSceneHandle) => {
     setScene(handle);
     if (import.meta.env.DEV) {
+      const dungeonFocus = new URLSearchParams(window.location.search).get("dungeon");
+      if (dungeonFocus) {
+        const sites = handle.getDungeonSites();
+        const focusSite = dungeonFocus === "entry" ? sites.entry
+          : dungeonFocus === "key" ? sites.key
+            : dungeonFocus === "cache" ? sites.cache
+              : dungeonFocus === "gate" ? sites.gate
+                : dungeonFocus === "treasure" ? sites.treasure
+                  : dungeonFocus === "boss" ? sites.boss
+                    : undefined;
+        if (focusSite) handle.movePlayerTo(focusSite);
+      }
       // Development-only verification hook: lets an automated harness drive the
       // founding loop without simulating a long input session. Stripped from
       // production builds by the DEV guard.
