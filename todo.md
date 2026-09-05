@@ -157,7 +157,8 @@
 - [x] Replace the flat explorer marker stack with a readable humanoid 3D character while preserving a procedural fallback.
 - [x] Add a cohesive humanoid presentation for the explorer and camp guide without using real-world Indigenous symbols, ceremonial dress, or sacred-site references.
 - [ ] Add a cohesive humanoid presentation for Skulltulas, Moblins, and the dungeon boss without using real-world Indigenous symbols, ceremonial dress, or sacred-site references.
-- [ ] Improve camp, beacon, gather nodes, and enemy silhouettes so the scene reads as a finished low-poly action-adventure slice rather than a prototype.
+- [x] Improve camp, beacon, and gather-node silhouettes so the Great River Spine slice reads as a finished low-poly action-adventure scene.
+- [ ] Add scene-rendered Skulltula, Moblin, and dungeon-boss silhouettes when the dungeon runtime is integrated.
 - [x] Reuse or adapt only assets with verified redistribution terms; do not ship unverified third-party downloads.
 - [x] Re-run typecheck, tests, mobile screenshots, and frame-budget sampling after the art pass.
 - [x] Save an art-upgrade checkpoint with source provenance and measured mobile performance.

@@ -357,6 +357,18 @@ function buildTideglassBeacon(scene: Scene, position: Vector3): Mesh {
   const beacon = MeshBuilder.CreateCylinder("tideglass-beacon", { height: 1.28, diameterTop: 0.02, diameterBottom: 0.62, tessellation: 5 }, scene);
   beacon.position = position.add(new Vector3(0, 0.72, 0));
   beacon.material = glow;
+  const aura = MeshBuilder.CreateTorus("tideglass-beacon-aura", { diameter: 1.18, thickness: 0.055, tessellation: 10 }, scene);
+  aura.position = position.add(new Vector3(0, 0.23, 0));
+  aura.rotation.x = Math.PI / 2;
+  aura.material = glow;
+  for (let shardIndex = 0; shardIndex < 3; shardIndex += 1) {
+    const shard = MeshBuilder.CreateCylinder(`tideglass-shard-${shardIndex}`, { height: 0.42, diameterTop: 0.015, diameterBottom: 0.12, tessellation: 5 }, scene);
+    const angle = shardIndex * (Math.PI * 2 / 3);
+    shard.position = position.add(new Vector3(Math.cos(angle) * 0.42, 0.34, Math.sin(angle) * 0.42));
+    shard.rotation.z = Math.cos(angle) * 0.32;
+    shard.rotation.x = Math.sin(angle) * 0.32;
+    shard.material = glow;
+  }
   marker.setEnabled(false);
   return beacon;
 }
@@ -429,6 +441,10 @@ function buildGatherNodes(scene: Scene, placements: readonly { readonly kind: Ga
       const mesh = MeshBuilder.CreateCylinder(`quest-reed-${index}`, { height: 0.98, diameterTop: 0.03, diameterBottom: 0.34, tessellation: 5 }, scene);
       mesh.position = position.add(new Vector3(0, 0.48, 0));
       mesh.material = reedMaterial;
+      const glowRing = MeshBuilder.CreateTorus(`quest-reed-ring-${index}`, { diameter: 0.72, thickness: 0.045, tessellation: 10 }, scene);
+      glowRing.position = position.add(new Vector3(0, 0.055, 0));
+      glowRing.rotation.x = Math.PI / 2;
+      glowRing.material = reedMaterial;
       const token = buildIllustratedGroundMarker(scene, `quest-reed-token-${index}`, RIVER_REED_TOKEN_URL, position.add(new Vector3(0, 0.045, 0)), 1.35);
       token.setEnabled(false);
       return { kind: definition.kind, mesh, position, collected: false };
@@ -438,6 +454,10 @@ function buildGatherNodes(scene: Scene, placements: readonly { readonly kind: Ga
     mesh.scaling.y = 0.48;
     mesh.position = position.add(new Vector3(0, 0.18, 0));
     mesh.material = stoneMaterial;
+    const glowRing = MeshBuilder.CreateTorus(`quest-stone-ring-${index}`, { diameter: 0.68, thickness: 0.04, tessellation: 10 }, scene);
+    glowRing.position = position.add(new Vector3(0, 0.055, 0));
+    glowRing.rotation.x = Math.PI / 2;
+    glowRing.material = stoneMaterial;
     const token = buildIllustratedGroundMarker(scene, `quest-stone-token-${index}`, SMOOTH_STONE_TOKEN_URL, position.add(new Vector3(0, 0.045, 0)), 1.15);
     token.setEnabled(false);
     return { kind: definition.kind, mesh, position, collected: false };
