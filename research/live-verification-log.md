@@ -28,3 +28,10 @@ all render; no prototype grid is visible. The guide affordance ("Ask the river g
 1. Movement via keyboard actually relocates the explorer and updates the compass bearing/distance.
 2. Beacon proximity swaps the action hint and permits attunement.
 3. Gather → deliver → wisp encounter → safe-return path behaves as the unit tests assert.
+
+
+## Humanoid Art Upgrade Verification — 2026-09-05
+
+The clean preview loaded the mobile title screen at 390×844 after the humanoid code change, with the existing PWA shell and control legend intact. TypeScript validation, the full 86-test suite, and the production Vite/PWA build all passed.
+
+The browser automation session repeatedly became `about:blank` immediately after clicking “Begin practice journey,” before a gameplay screenshot could be captured. This prevented a reliable active-play visual assertion in the browser; it is recorded as a verification limitation rather than treated as a passing gameplay visual check. The code path remains covered by the successful typecheck/build and the existing scene/domain tests, but the mobile active-play screenshot and post-art frame-budget sample remain open checklist items.

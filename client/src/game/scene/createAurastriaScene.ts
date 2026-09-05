@@ -8,6 +8,7 @@ import { Texture } from "@babylonjs/core/Materials/Textures/texture";
 import { DirectionalLight } from "@babylonjs/core/Lights/directionalLight";
 import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
+import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import "@babylonjs/core/Meshes/instancedMesh";
 import "@babylonjs/core/Shaders/ShadersInclude/instancesDeclaration";
 import "@babylonjs/core/Shaders/ShadersInclude/instancesVertex";
@@ -132,6 +133,93 @@ function createMaterial(scene: Scene, name: string, color: string, emissive?: st
 
 function toWorldPosition(x: number, y: number): Vector3 {
   return new Vector3((x - MAP_WIDTH / 2) * TILE_WORLD_SIZE, 0, (y - MAP_HEIGHT / 2) * TILE_WORLD_SIZE);
+}
+
+interface HumanoidCharacterRuntime {
+  readonly root: TransformNode;
+  readonly marker: Mesh;
+  readonly heading: Mesh;
+}
+
+/**
+ * Aurastria's first character pass uses a compact Babylon-native humanoid rather
+ * than a billboard or flat token. It deliberately stays asset-light: shared
+ * materials, low tessellation, and a single root make it safe for mobile while
+ * leaving room for a verified GLB replacement later.
+ */
+function buildHumanoidCharacter(
+  scene: Scene,
+  name: string,
+  palette: { readonly cloak: string; readonly trim: string; readonly skin: string; readonly hair: string; readonly accent: string },
+): HumanoidCharacterRuntime {
+  const root = new TransformNode(`${name}-root`, scene);
+  const cloak = createMaterial(scene, `${name}-cloak`, palette.cloak);
+  const trim = createMaterial(scene, `${name}-trim`, palette.trim, palette.accent);
+  const skin = createMaterial(scene, `${name}-skin`, palette.skin);
+  const hair = createMaterial(scene, `${name}-hair`, palette.hair);
+  [cloak, trim, skin, hair].forEach((material) => { material.disableLighting = true; });
+
+  const torso = MeshBuilder.CreateCylinder(`${name}-torso`, { height: 0.82, diameterTop: 0.48, diameterBottom: 0.68, tessellation: 6 }, scene);
+  torso.position.y = 0.86;
+  torso.material = cloak;
+  torso.parent = root;
+
+  const belt = MeshBuilder.CreateTorus(`${name}-belt`, { diameter: 0.56, thickness: 0.075, tessellation: 8 }, scene);
+  belt.position.y = 0.68;
+  belt.rotation.x = Math.PI / 2;
+  belt.material = trim;
+  belt.parent = root;
+
+  const head = MeshBuilder.CreateSphere(`${name}-head`, { diameter: 0.48, segments: 8 }, scene);
+  head.position.y = 1.48;
+  head.material = skin;
+  head.parent = root;
+
+  const hairCap = MeshBuilder.CreateCylinder(`${name}-hair-cap`, { height: 0.18, diameterTop: 0.3, diameterBottom: 0.55, tessellation: 8 }, scene);
+  hairCap.position.y = 1.7;
+  hairCap.material = hair;
+  hairCap.parent = root;
+
+  const leftArm = MeshBuilder.CreateCylinder(`${name}-arm-l`, { height: 0.64, diameter: 0.16, tessellation: 6 }, scene);
+  leftArm.position.set(-0.38, 0.86, 0);
+  leftArm.rotation.z = -0.18;
+  leftArm.material = cloak;
+  leftArm.parent = root;
+  const rightArm = leftArm.clone(`${name}-arm-r`);
+  rightArm.position.x = 0.38;
+  rightArm.rotation.z = 0.18;
+  rightArm.parent = root;
+
+  const leftLeg = MeshBuilder.CreateCylinder(`${name}-leg-l`, { height: 0.64, diameter: 0.18, tessellation: 6 }, scene);
+  leftLeg.position.set(-0.18, 0.3, 0);
+  leftLeg.material = trim;
+  leftLeg.parent = root;
+  const rightLeg = leftLeg.clone(`${name}-leg-r`);
+  rightLeg.position.x = 0.18;
+  rightLeg.parent = root;
+
+  const staff = MeshBuilder.CreateCylinder(`${name}-staff`, { height: 1.55, diameter: 0.055, tessellation: 6 }, scene);
+  staff.position.set(0.55, 0.86, 0.08);
+  staff.rotation.z = -0.08;
+  staff.material = trim;
+  staff.parent = root;
+  const staffGem = MeshBuilder.CreateSphere(`${name}-staff-gem`, { diameter: 0.16, segments: 6 }, scene);
+  staffGem.position.set(0.55, 1.67, 0.08);
+  staffGem.material = trim;
+  staffGem.parent = root;
+
+  const marker = MeshBuilder.CreateCylinder(`${name}-ground-marker`, { height: 0.06, diameter: 0.78, tessellation: 12 }, scene);
+  marker.position.y = 0.05;
+  marker.material = trim;
+  marker.parent = root;
+
+  const heading = MeshBuilder.CreateCylinder(`${name}-heading`, { height: 0.07, diameterTop: 0, diameterBottom: 0.2, tessellation: 3 }, scene);
+  heading.position.set(0, 0.08, 0.52);
+  heading.rotation.y = Math.PI;
+  heading.material = trim;
+  heading.parent = root;
+
+  return { root, marker, heading };
 }
 
 function buildPaintedTerrainPlate(scene: Scene): void {
@@ -412,23 +500,18 @@ export function createAurastriaScene(
     paused: false,
   };
 
-  const player = MeshBuilder.CreateCylinder("wanderer", { height: 0.13, diameter: 1.02, tessellation: 14 }, scene);
+  const playerVisual = buildHumanoidCharacter(scene, "tidewalker", {
+    cloak: "#1D5C59",
+    trim: "#EBC563",
+    skin: "#B97855",
+    hair: "#2A211D",
+    accent: "#42D1C2",
+  });
+  const player = playerVisual.root;
   player.position = toWorldPosition(10, 14);
-  player.position.y = 0.09;
-  const playerOuter = createMaterial(scene, "wanderer-material", "#1D5C59", "#0F332F");
-  playerOuter.disableLighting = true;
-  player.material = playerOuter;
-  const playerCore = MeshBuilder.CreateCylinder("wanderer-core", { height: 0.08, diameter: 0.7, tessellation: 14 }, scene);
-  playerCore.position = player.position.add(new Vector3(0, 0.11, 0));
-  const playerCoreMaterial = createMaterial(scene, "wanderer-core-material", "#EBC563", "#8D6422");
-  playerCoreMaterial.disableLighting = true;
-  playerCore.material = playerCoreMaterial;
-  const playerChevron = MeshBuilder.CreateCylinder("wanderer-heading", { height: 0.075, diameterTop: 0, diameterBottom: 0.38, tessellation: 3 }, scene);
-  playerChevron.position = player.position.add(new Vector3(0, 0.16, 0.28));
-  playerChevron.rotation.y = Math.PI;
-  const playerChevronMaterial = createMaterial(scene, "wanderer-heading-material", "#DFF9E7", "#B1E7D5");
-  playerChevronMaterial.disableLighting = true;
-  playerChevron.material = playerChevronMaterial;
+  player.position.y = 0;
+  const playerCore = playerVisual.marker;
+  const playerChevron = playerVisual.heading;
   const playerToken = buildIllustratedGroundMarker(scene, "tidewalker-token", TIDEWALKER_TOKEN_URL, player.position.add(new Vector3(0, 0.055, 0)), 1.65);
   playerToken.setEnabled(false);
 
@@ -473,6 +556,15 @@ export function createAurastriaScene(
   const riverWispRuntime = buildRiverWisp(scene);
   riverWispRuntime.light.includedOnlyMeshes = [riverWispRuntime.mesh, riverWispRuntime.halo];
   const campPosition = terrainRuntime.campPosition;
+  const campGuide = buildHumanoidCharacter(scene, "camp-guide", {
+    cloak: "#7A4B38",
+    trim: "#D6B66A",
+    skin: "#A9674D",
+    hair: "#241C19",
+    accent: "#D08A5A",
+  });
+  campGuide.root.position = campPosition.add(new Vector3(1.45, 0, 1.12));
+  campGuide.root.rotation.y = Math.PI * 0.82;
   const pressed = new Set<string>();
   const movementKeys = new Set<string>(["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "KeyW", "KeyA", "KeyS", "KeyD"]);
   let quest = createFoundingQuest();
@@ -515,17 +607,13 @@ export function createAurastriaScene(
   syncWispEncounter();
 
   const syncPlayerMarker = () => {
+    // The humanoid's marker and heading are parented to the player root, so only
+    // the legacy illustrated token needs an explicit world-space update.
     playerToken.position.set(player.position.x, 0.055, player.position.z);
     playerToken.rotation.y = player.rotation.y;
-    playerCore.position.set(player.position.x, 0.16, player.position.z);
-    // Compute the chevron offset arithmetically; this runs on every movement frame,
-    // so allocating a temporary Vector3 here would be per-frame garbage.
-    playerChevron.position.set(
-      player.position.x + Math.sin(player.rotation.y) * 0.28,
-      0.19,
-      player.position.z + Math.cos(player.rotation.y) * 0.28,
-    );
-    playerChevron.rotation.y = player.rotation.y;
+    playerCore.position.y = 0.05;
+    playerChevron.position.set(0, 0.08, 0.52);
+    playerChevron.rotation.y = Math.PI;
   };
 
   const currentNavigation = () => beaconNavigation(

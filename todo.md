@@ -148,3 +148,16 @@
 - [x] Implement a functional mobile beacon-navigation compass or minimap that updates from the explorer and Tideglass positions
 - [x] Verify the compact HUD and navigation aid remain readable and non-obstructive at 375×812 and 390×844 during active play
 - [x] Record explicit visual-verification evidence for the 375×812 and 390×844 active-play HUD and compass review
+
+
+## 13. Free-resource art upgrade and humanoid character pass
+- [x] Audit Blender Models, GraphicBurger, OpenGameArt, Quaternius, and TextureKing pages for usable assets, formats, and redistribution terms.
+- [x] Record source URLs, attribution requirements, and asset provenance in ASSETS.md before importing or adapting any third-party content.
+- [x] Define a mobile-safe character asset budget for humanoid explorer, NPC, wisp, Skulltula, Moblin, and dungeon boss presentation.
+- [x] Replace the flat explorer marker stack with a readable humanoid 3D character while preserving a procedural fallback.
+- [x] Add a cohesive humanoid presentation for the explorer and camp guide without using real-world Indigenous symbols, ceremonial dress, or sacred-site references.
+- [ ] Add a cohesive humanoid presentation for Skulltulas, Moblins, and the dungeon boss without using real-world Indigenous symbols, ceremonial dress, or sacred-site references.
+- [ ] Improve camp, beacon, gather nodes, and enemy silhouettes so the scene reads as a finished low-poly action-adventure slice rather than a prototype.
+- [x] Reuse or adapt only assets with verified redistribution terms; do not ship unverified third-party downloads.
+- [ ] Re-run typecheck, tests, mobile screenshots, and frame-budget sampling after the art pass.
+- [ ] Save an art-upgrade checkpoint with source provenance and measured mobile performance.

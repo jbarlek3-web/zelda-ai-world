@@ -80,3 +80,37 @@ no recognizable sacred sites, no modern technology, no firearms.
 ## Audio Direction
 
 Audio is grounded in environmental texture—wind, ice, insects, rain, rivers, surf, birds, fire, wood, stone, and regional work rhythms—with an original score written in collaboration with appropriately credited musicians. Do not use ceremonial recordings, traditional songs, chants, or instruments as generic atmosphere without explicit licensed permission and cultural approval. Sound design shall follow the `sound-design` skill: dialogue remains primary, music ducks 18–20 dB beneath narration, final web delivery targets approximately -14 LUFS integrated and a -1.5 dBTP ceiling.
+
+
+## 13. Humanoid Character Upgrade
+
+| Asset | Source / provenance | Runtime use |
+|---|---|---|
+| `tidewalker-humanoid-runtime` | Original Babylon-native low-poly assembly authored for Aurastria after auditing Blender Models, OpenGameArt, and Quaternius. No unverified third-party files are bundled. | Player explorer: cloak, belt, head, hair cap, arms, legs, river staff, staff gem, ground marker, and heading indicator under one TransformNode. |
+| `camp-guide-humanoid-runtime` | Same original runtime builder with a distinct fictional palette and role silhouette. | Camp guide landmark near Founding Camp. |
+
+The current implementation uses the supplied resource sites as sourcing and visual-direction references, but does not redistribute an external model whose item-level license has not been verified. The runtime builder targets low tessellation, shared material behavior, and a mobile-safe mesh budget. A future verified Quaternius or OpenGameArt GLB can replace the builder behind the same character runtime contract.
+
+
+## 14. External Source Provenance and Shipping Rules
+
+| Source | Candidate use | Verified license / restriction | Status |
+|---|---|---|---|
+| https://www.blender-models.com/ | Human and character references; candidate Blender models | Mixed item-level terms, including CC BY and CC BY-NC examples; verify the concrete model page before use. | Reference-only in current build |
+| https://graphicburger.com/mobile-game-gui/ | Mobile UI visual reference or embedded UI art | GraphicBurger permits commercial use and modification without required attribution, but prohibits standalone resale or redistribution of source files. | Reference-only in current build |
+| https://opengameart.org/ | Candidate characters, props, and environment art | License varies by item and author; verify every asset page and attribution requirement. | Reference-only in current build |
+| https://quaternius.com/ | Preferred candidate for future humanoid GLB and animation packs | QAL v1.0 permits commercial products, modification, and distribution of completed products without credit; do not redistribute the assets standalone. | Future import candidate; not bundled yet |
+| https://www.textureking.com/ | Texture references | Commercial use and modification allowed, but standalone or combined redistribution requires prior written consent; no ownership claim. | Reference-only in current build |
+
+## 15. Mobile Character Asset Budget
+
+| Actor | Geometry target | Material groups | Lighting / animation budget | Current implementation |
+|---|---:|---:|---|---|
+| Explorer | 1,000–2,000 triangles | 4–6 shared materials | Unlit materials; transform-only locomotion; no per-frame allocations | Original Babylon-native humanoid |
+| Camp NPC | 1,000–2,000 triangles | 4–6 shared materials | Unlit materials; static pose; one shared builder | Original Babylon-native humanoid |
+| River Wisp | 300–700 triangles | 2–3 materials | Emissive unlit body, one scoped light, one halo | Existing spirit mesh; intentionally non-humanoid |
+| Skulltula | 600–1,200 triangles | 3–4 shared materials | Deterministic FSM; pooled or persistent mesh | Domain FSM complete; scene visual integration pending |
+| Moblin | 1,200–2,000 triangles | 4–6 shared materials | Deterministic FSM; no dynamic shadow requirement | Domain FSM complete; scene visual integration pending |
+| Dungeon boss | 2,000–3,500 triangles | 5–8 shared materials | Scoped emissive accents; phase changes without mesh churn | Domain FSM complete; scene visual integration pending |
+
+All current shipped character geometry is original procedural Babylon geometry, so no unverified external asset is redistributed. The runtime contract is intentionally compatible with a later verified GLB import.
